@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(pnpm install:*)",
+      "Bash(bun add:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint:fix:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run format:check:*)"
+    ]
+  }
+}
