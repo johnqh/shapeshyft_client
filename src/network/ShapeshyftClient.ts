@@ -1,6 +1,6 @@
 import type {
   AiExecutionResponse,
-  AiPayloadResponse,
+  AiPromptResponse,
   BaseResponse,
   Endpoint,
   EndpointCreateRequest,
@@ -516,14 +516,14 @@ export class ShapeshyftClient {
     projectName: string,
     endpointName: string,
     input: unknown
-  ): Promise<BaseResponse<AiExecutionResponse | AiPayloadResponse>> {
+  ): Promise<BaseResponse<AiExecutionResponse | AiPromptResponse>> {
     const headers = createHeaders();
     const queryString = input
       ? buildQueryString({ input: JSON.stringify(input) })
       : '';
 
     const response = await this.networkClient.get<
-      BaseResponse<AiExecutionResponse | AiPayloadResponse>
+      BaseResponse<AiExecutionResponse | AiPromptResponse>
     >(
       buildUrl(
         this.baseUrl,
@@ -547,11 +547,11 @@ export class ShapeshyftClient {
     projectName: string,
     endpointName: string,
     input: unknown
-  ): Promise<BaseResponse<AiExecutionResponse | AiPayloadResponse>> {
+  ): Promise<BaseResponse<AiExecutionResponse | AiPromptResponse>> {
     const headers = createHeaders();
 
     const response = await this.networkClient.post<
-      BaseResponse<AiExecutionResponse | AiPayloadResponse>
+      BaseResponse<AiExecutionResponse | AiPromptResponse>
     >(
       buildUrl(
         this.baseUrl,
@@ -576,7 +576,7 @@ export class ShapeshyftClient {
     endpointName: string,
     input: unknown,
     method: 'GET' | 'POST' = 'POST'
-  ): Promise<BaseResponse<AiExecutionResponse | AiPayloadResponse>> {
+  ): Promise<BaseResponse<AiExecutionResponse | AiPromptResponse>> {
     if (method === 'GET') {
       return this.executeAiGet(projectName, endpointName, input);
     }

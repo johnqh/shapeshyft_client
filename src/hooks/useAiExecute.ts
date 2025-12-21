@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import type {
   AiExecutionResponse,
-  AiPayloadResponse,
+  AiPromptResponse,
   BaseResponse,
   HttpMethod,
   NetworkClient,
@@ -12,7 +12,7 @@ import { ShapeshyftClient } from '../network/ShapeshyftClient';
 /**
  * AI execution result type
  */
-export type AiResult = AiExecutionResponse | AiPayloadResponse;
+export type AiResult = AiExecutionResponse | AiPromptResponse;
 
 /**
  * Return type for useAiExecute hook
