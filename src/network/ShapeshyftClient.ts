@@ -1,6 +1,7 @@
 import type {
   AiExecutionResponse,
   AiPromptResponse,
+  AnalyticsResponse,
   BaseResponse,
   Endpoint,
   EndpointCreateRequest,
@@ -14,10 +15,9 @@ import type {
   ProjectCreateRequest,
   ProjectQueryParams,
   ProjectUpdateRequest,
-  UsageAggregate,
   UsageAnalyticsQueryParams,
-  UsageByDate,
-  UsageByEndpoint,
+  UserSettings,
+  UserSettingsUpdateRequest,
 } from '@sudobility/shapeshyft_types';
 import type { FirebaseIdToken } from '../types';
 import {
@@ -27,15 +27,6 @@ import {
   createHeaders,
   handleApiError,
 } from '../utils/shapeshyft-helpers';
-
-/**
- * Analytics data response type
- */
-export interface AnalyticsData {
-  aggregate: UsageAggregate;
-  by_endpoint: UsageByEndpoint[];
-  by_date: UsageByDate[];
-}
 
 /**
  * ShapeShyft API client
@@ -485,11 +476,13 @@ export class ShapeshyftClient {
     userId: string,
     token: FirebaseIdToken,
     params?: UsageAnalyticsQueryParams
-  ): Promise<BaseResponse<AnalyticsData>> {
+  ): Promise<BaseResponse<AnalyticsResponse>> {
     const headers = createAuthHeaders(token);
     const queryString = params ? buildQueryString(params) : '';
 
-    const response = await this.networkClient.get<BaseResponse<AnalyticsData>>(
+    const response = await this.networkClient.get<
+      BaseResponse<AnalyticsResponse>
+    >(
       buildUrl(
         this.baseUrl,
         `/api/v1/users/${encodeURIComponent(userId)}/analytics${queryString}`
@@ -499,6 +492,62 @@ export class ShapeshyftClient {
 
     if (!response.ok || !response.data) {
       throw handleApiError(response, 'get analytics');
+    }
+
+    return response.data;
+  }
+
+  // =============================================================================
+  // USER SETTINGS (Firebase auth required)
+  // =============================================================================
+
+  /**
+   * Get user settings
+   * GET /api/v1/users/:userId/settings
+   */
+  async getSettings(
+    userId: string,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<UserSettings>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.get<BaseResponse<UserSettings>>(
+      buildUrl(
+        this.baseUrl,
+        `/api/v1/users/${encodeURIComponent(userId)}/settings`
+      ),
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'get settings');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Update user settings (upsert)
+   * PUT /api/v1/users/:userId/settings
+   */
+  async updateSettings(
+    userId: string,
+    data: UserSettingsUpdateRequest,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<UserSettings>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.put<BaseResponse<UserSettings>>(
+      buildUrl(
+        this.baseUrl,
+        `/api/v1/users/${encodeURIComponent(userId)}/settings`
+      ),
+      data,
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'update settings');
     }
 
     return response.data;

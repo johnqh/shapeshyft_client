@@ -1,1 +1,1 @@
-export { ShapeshyftClient, type AnalyticsData } from './ShapeshyftClient';
+export { ShapeshyftClient } from './ShapeshyftClient';
