@@ -608,7 +608,7 @@ export class ShapeshyftClient {
         this.baseUrl,
         `/api/v1/ai/${encodeURIComponent(organizationPath)}/${encodeURIComponent(projectName)}/${encodeURIComponent(endpointName)}`
       ),
-      { input },
+      input,
       { headers }
     );
 
