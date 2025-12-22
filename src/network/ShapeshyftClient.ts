@@ -559,9 +559,10 @@ export class ShapeshyftClient {
 
   /**
    * Execute AI endpoint via GET (for simple inputs)
-   * GET /api/v1/ai/:projectName/:endpointName
+   * GET /api/v1/ai/:organizationPath/:projectName/:endpointName
    */
   async executeAiGet(
+    organizationPath: string,
     projectName: string,
     endpointName: string,
     input: unknown
@@ -576,7 +577,7 @@ export class ShapeshyftClient {
     >(
       buildUrl(
         this.baseUrl,
-        `/api/v1/ai/${encodeURIComponent(projectName)}/${encodeURIComponent(endpointName)}${queryString}`
+        `/api/v1/ai/${encodeURIComponent(organizationPath)}/${encodeURIComponent(projectName)}/${encodeURIComponent(endpointName)}${queryString}`
       ),
       { headers }
     );
@@ -590,9 +591,10 @@ export class ShapeshyftClient {
 
   /**
    * Execute AI endpoint via POST (for complex inputs)
-   * POST /api/v1/ai/:projectName/:endpointName
+   * POST /api/v1/ai/:organizationPath/:projectName/:endpointName
    */
   async executeAiPost(
+    organizationPath: string,
     projectName: string,
     endpointName: string,
     input: unknown
@@ -604,7 +606,7 @@ export class ShapeshyftClient {
     >(
       buildUrl(
         this.baseUrl,
-        `/api/v1/ai/${encodeURIComponent(projectName)}/${encodeURIComponent(endpointName)}`
+        `/api/v1/ai/${encodeURIComponent(organizationPath)}/${encodeURIComponent(projectName)}/${encodeURIComponent(endpointName)}`
       ),
       { input },
       { headers }
@@ -621,14 +623,15 @@ export class ShapeshyftClient {
    * Execute AI endpoint (auto-selects GET or POST based on method parameter)
    */
   async executeAi(
+    organizationPath: string,
     projectName: string,
     endpointName: string,
     input: unknown,
     method: 'GET' | 'POST' = 'POST'
   ): Promise<BaseResponse<AiExecutionResponse | AiPromptResponse>> {
     if (method === 'GET') {
-      return this.executeAiGet(projectName, endpointName, input);
+      return this.executeAiGet(organizationPath, projectName, endpointName, input);
     }
-    return this.executeAiPost(projectName, endpointName, input);
+    return this.executeAiPost(organizationPath, projectName, endpointName, input);
   }
 }

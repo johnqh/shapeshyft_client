@@ -23,6 +23,7 @@ export interface UseAiExecuteReturn {
   error: Optional<string>;
 
   execute: (
+    organizationPath: string,
     projectName: string,
     endpointName: string,
     input: unknown,
@@ -55,6 +56,7 @@ export const useAiExecute = (
    */
   const execute = useCallback(
     async (
+      organizationPath: string,
       projectName: string,
       endpointName: string,
       input: unknown,
@@ -65,6 +67,7 @@ export const useAiExecute = (
 
       try {
         const response = await client.executeAi(
+          organizationPath,
           projectName,
           endpointName,
           input,
