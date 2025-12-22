@@ -1,20 +1,18 @@
 import { useCallback, useMemo, useState } from 'react';
 import type {
+  AnalyticsResponse,
   NetworkClient,
   Optional,
   UsageAnalyticsQueryParams,
 } from '@sudobility/shapeshyft_types';
 import type { FirebaseIdToken } from '../types';
-import {
-  type AnalyticsData,
-  ShapeshyftClient,
-} from '../network/ShapeshyftClient';
+import { ShapeshyftClient } from '../network/ShapeshyftClient';
 
 /**
  * Return type for useAnalytics hook
  */
 export interface UseAnalyticsReturn {
-  analytics: Optional<AnalyticsData>;
+  analytics: Optional<AnalyticsResponse>;
   isLoading: boolean;
   error: Optional<string>;
 
@@ -41,7 +39,7 @@ export const useAnalytics = (
     [baseUrl, networkClient]
   );
 
-  const [analytics, setAnalytics] = useState<Optional<AnalyticsData>>(null);
+  const [analytics, setAnalytics] = useState<Optional<AnalyticsResponse>>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Optional<string>>(null);
 
