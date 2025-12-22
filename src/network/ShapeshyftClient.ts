@@ -630,8 +630,48 @@ export class ShapeshyftClient {
     method: 'GET' | 'POST' = 'POST'
   ): Promise<BaseResponse<AiExecutionResponse | AiPromptResponse>> {
     if (method === 'GET') {
-      return this.executeAiGet(organizationPath, projectName, endpointName, input);
+      return this.executeAiGet(
+        organizationPath,
+        projectName,
+        endpointName,
+        input
+      );
     }
-    return this.executeAiPost(organizationPath, projectName, endpointName, input);
+    return this.executeAiPost(
+      organizationPath,
+      projectName,
+      endpointName,
+      input
+    );
+  }
+
+  /**
+   * Get AI prompt without executing (for debugging/preview)
+   * POST /api/v1/ai/:organizationPath/:projectName/:endpointName/prompt
+   */
+  async getAiPrompt(
+    organizationPath: string,
+    projectName: string,
+    endpointName: string,
+    input: unknown
+  ): Promise<BaseResponse<AiPromptResponse>> {
+    const headers = createHeaders();
+
+    const response = await this.networkClient.post<
+      BaseResponse<AiPromptResponse>
+    >(
+      buildUrl(
+        this.baseUrl,
+        `/api/v1/ai/${encodeURIComponent(organizationPath)}/${encodeURIComponent(projectName)}/${encodeURIComponent(endpointName)}/prompt`
+      ),
+      input,
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'get AI prompt');
+    }
+
+    return response.data;
   }
 }

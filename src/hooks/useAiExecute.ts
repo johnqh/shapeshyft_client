@@ -30,6 +30,13 @@ export interface UseAiExecuteReturn {
     method?: HttpMethod
   ) => Promise<BaseResponse<AiResult>>;
 
+  getPrompt: (
+    organizationPath: string,
+    projectName: string,
+    endpointName: string,
+    input: unknown
+  ) => Promise<BaseResponse<AiPromptResponse>>;
+
   clearError: () => void;
   reset: () => void;
 }
@@ -96,6 +103,44 @@ export const useAiExecute = (
     [client]
   );
 
+  /**
+   * Get the generated prompt without executing
+   */
+  const getPrompt = useCallback(
+    async (
+      organizationPath: string,
+      projectName: string,
+      endpointName: string,
+      input: unknown
+    ): Promise<BaseResponse<AiPromptResponse>> => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await client.getAiPrompt(
+          organizationPath,
+          projectName,
+          endpointName,
+          input
+        );
+        return response;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to get prompt';
+        setError(errorMessage);
+        console.error('[useAiExecute] getPrompt error:', errorMessage, err);
+        return {
+          success: false,
+          error: errorMessage,
+          timestamp: new Date().toISOString(),
+        };
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [client]
+  );
+
   const clearError = useCallback(() => {
     setError(null);
   }, []);
@@ -112,9 +157,10 @@ export const useAiExecute = (
       isLoading,
       error,
       execute,
+      getPrompt,
       clearError,
       reset,
     }),
-    [result, isLoading, error, execute, clearError, reset]
+    [result, isLoading, error, execute, getPrompt, clearError, reset]
   );
 };
