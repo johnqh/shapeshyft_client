@@ -1,12 +1,14 @@
 import { useCallback, useMemo, useState } from 'react';
 import type {
   BaseResponse,
+  GetApiKeyResponse,
   NetworkClient,
   Optional,
   Project,
   ProjectCreateRequest,
   ProjectQueryParams,
   ProjectUpdateRequest,
+  RefreshApiKeyResponse,
 } from '@sudobility/shapeshyft_types';
 import type { FirebaseIdToken } from '../types';
 import { ShapeshyftClient } from '../network/ShapeshyftClient';
@@ -45,6 +47,16 @@ export interface UseProjectsReturn {
     projectId: string,
     token: FirebaseIdToken
   ) => Promise<BaseResponse<Project>>;
+  getProjectApiKey: (
+    userId: string,
+    projectId: string,
+    token: FirebaseIdToken
+  ) => Promise<BaseResponse<GetApiKeyResponse>>;
+  refreshProjectApiKey: (
+    userId: string,
+    projectId: string,
+    token: FirebaseIdToken
+  ) => Promise<BaseResponse<RefreshApiKeyResponse>>;
 
   clearError: () => void;
   reset: () => void;
@@ -246,6 +258,90 @@ export const useProjects = (
     [client, refresh, lastParams]
   );
 
+  /**
+   * Get project API key (full key)
+   */
+  const getProjectApiKey = useCallback(
+    async (
+      userId: string,
+      projectId: string,
+      token: FirebaseIdToken
+    ): Promise<BaseResponse<GetApiKeyResponse>> => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await client.getProjectApiKey(
+          userId,
+          projectId,
+          token
+        );
+        return response;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to get API key';
+        setError(errorMessage);
+        console.error(
+          '[useProjects] getProjectApiKey error:',
+          errorMessage,
+          err
+        );
+        return {
+          success: false,
+          error: errorMessage,
+          timestamp: new Date().toISOString(),
+        };
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [client]
+  );
+
+  /**
+   * Refresh project API key (generates new key)
+   */
+  const refreshProjectApiKey = useCallback(
+    async (
+      userId: string,
+      projectId: string,
+      token: FirebaseIdToken
+    ): Promise<BaseResponse<RefreshApiKeyResponse>> => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await client.refreshProjectApiKey(
+          userId,
+          projectId,
+          token
+        );
+        if (response.success) {
+          // Refresh projects list to get updated api_key_prefix
+          await refresh(userId, token, lastParams ?? undefined);
+        }
+        return response;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to refresh API key';
+        setError(errorMessage);
+        console.error(
+          '[useProjects] refreshProjectApiKey error:',
+          errorMessage,
+          err
+        );
+        return {
+          success: false,
+          error: errorMessage,
+          timestamp: new Date().toISOString(),
+        };
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [client, refresh, lastParams]
+  );
+
   const clearError = useCallback(() => {
     setError(null);
   }, []);
@@ -267,6 +363,8 @@ export const useProjects = (
       createProject,
       updateProject,
       deleteProject,
+      getProjectApiKey,
+      refreshProjectApiKey,
       clearError,
       reset,
     }),
@@ -279,6 +377,8 @@ export const useProjects = (
       createProject,
       updateProject,
       deleteProject,
+      getProjectApiKey,
+      refreshProjectApiKey,
       clearError,
       reset,
     ]

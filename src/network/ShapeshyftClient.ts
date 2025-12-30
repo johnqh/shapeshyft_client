@@ -7,6 +7,7 @@ import type {
   EndpointCreateRequest,
   EndpointQueryParams,
   EndpointUpdateRequest,
+  GetApiKeyResponse,
   LlmApiKeyCreateRequest,
   LlmApiKeySafe,
   LlmApiKeyUpdateRequest,
@@ -15,6 +16,7 @@ import type {
   ProjectCreateRequest,
   ProjectQueryParams,
   ProjectUpdateRequest,
+  RefreshApiKeyResponse,
   UsageAnalyticsQueryParams,
   UserSettings,
   UserSettingsUpdateRequest,
@@ -316,6 +318,63 @@ export class ShapeshyftClient {
 
     if (!response.ok || !response.data) {
       throw handleApiError(response, 'delete project');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Get project API key (full key)
+   * GET /api/v1/users/:userId/projects/:projectId/api-key
+   */
+  async getProjectApiKey(
+    userId: string,
+    projectId: string,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<GetApiKeyResponse>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.get<
+      BaseResponse<GetApiKeyResponse>
+    >(
+      buildUrl(
+        this.baseUrl,
+        `/api/v1/users/${encodeURIComponent(userId)}/projects/${encodeURIComponent(projectId)}/api-key`
+      ),
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'get project API key');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Refresh project API key (generates new key)
+   * POST /api/v1/users/:userId/projects/:projectId/api-key/refresh
+   */
+  async refreshProjectApiKey(
+    userId: string,
+    projectId: string,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<RefreshApiKeyResponse>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.post<
+      BaseResponse<RefreshApiKeyResponse>
+    >(
+      buildUrl(
+        this.baseUrl,
+        `/api/v1/users/${encodeURIComponent(userId)}/projects/${encodeURIComponent(projectId)}/api-key/refresh`
+      ),
+      {},
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'refresh project API key');
     }
 
     return response.data;
