@@ -42,7 +42,7 @@ describe('useEndpoints', () => {
         },
       ];
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/user-123/projects/proj-1/endpoints`,
+        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints`,
         { ok: true, data: { success: true, data: mockEndpoints } },
         'GET'
       );
@@ -60,7 +60,7 @@ describe('useEndpoints', () => {
 
     it('should set error on failed request', async () => {
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/user-123/projects/proj-1/endpoints`,
+        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints`,
         { ok: false, data: { success: false, error: 'Unauthorized' } },
         'GET'
       );
@@ -84,7 +84,7 @@ describe('useEndpoints', () => {
         display_name: 'Summarize',
       };
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/user-123/projects/proj-1/endpoints/ep-1`,
+        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints/ep-1`,
         { ok: true, data: { success: true, data: mockEndpoint } },
         'GET'
       );
@@ -97,7 +97,7 @@ describe('useEndpoints', () => {
       });
 
       expect(mockNetworkClient.wasUrlCalled(
-        `${baseUrl}/api/v1/users/user-123/projects/proj-1/endpoints/ep-1`,
+        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints/ep-1`,
         'GET'
       )).toBe(true);
       expect(response).toEqual(
@@ -118,12 +118,12 @@ describe('useEndpoints', () => {
         llm_key_id: 'key-1',
       };
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/user-123/projects/proj-1/endpoints`,
+        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints`,
         { ok: true, data: { success: true, data: newEndpoint } },
         'POST'
       );
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/user-123/projects/proj-1/endpoints`,
+        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints`,
         { ok: true, data: { success: true, data: [newEndpoint] } },
         'GET'
       );
@@ -140,11 +140,11 @@ describe('useEndpoints', () => {
       });
 
       expect(mockNetworkClient.wasUrlCalled(
-        `${baseUrl}/api/v1/users/user-123/projects/proj-1/endpoints`,
+        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints`,
         'POST'
       )).toBe(true);
       expect(mockNetworkClient.wasUrlCalled(
-        `${baseUrl}/api/v1/users/user-123/projects/proj-1/endpoints`,
+        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints`,
         'GET'
       )).toBe(true);
     });
@@ -153,12 +153,12 @@ describe('useEndpoints', () => {
   describe('updateEndpoint', () => {
     it('should update endpoint and refresh list', async () => {
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/user-123/projects/proj-1/endpoints/ep-1`,
+        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints/ep-1`,
         { ok: true, data: { success: true, data: { uuid: 'ep-1' } } },
         'PUT'
       );
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/user-123/projects/proj-1/endpoints`,
+        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints`,
         { ok: true, data: { success: true, data: [] } },
         'GET'
       );
@@ -176,14 +176,14 @@ describe('useEndpoints', () => {
       });
 
       expect(mockNetworkClient.wasUrlCalled(
-        `${baseUrl}/api/v1/users/user-123/projects/proj-1/endpoints/ep-1`,
+        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints/ep-1`,
         'PUT'
       )).toBe(true);
     });
 
     it('should update endpoint with IP allowlist', async () => {
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/user-123/projects/proj-1/endpoints/ep-1`,
+        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints/ep-1`,
         { ok: true, data: { success: true, data: { uuid: 'ep-1', ip_allowlist: ['192.168.1.1'] } } },
         'PUT'
       );
@@ -202,7 +202,7 @@ describe('useEndpoints', () => {
 
       // Verify the PUT request was made
       expect(mockNetworkClient.wasUrlCalled(
-        `${baseUrl}/api/v1/users/user-123/projects/proj-1/endpoints/ep-1`,
+        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints/ep-1`,
         'PUT'
       )).toBe(true);
     });
@@ -211,12 +211,12 @@ describe('useEndpoints', () => {
   describe('deleteEndpoint', () => {
     it('should delete endpoint and refresh list', async () => {
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/user-123/projects/proj-1/endpoints/ep-1`,
+        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints/ep-1`,
         { ok: true, data: { success: true, data: { uuid: 'ep-1' } } },
         'DELETE'
       );
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/user-123/projects/proj-1/endpoints`,
+        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints`,
         { ok: true, data: { success: true, data: [] } },
         'GET'
       );
@@ -228,7 +228,7 @@ describe('useEndpoints', () => {
       });
 
       expect(mockNetworkClient.wasUrlCalled(
-        `${baseUrl}/api/v1/users/user-123/projects/proj-1/endpoints/ep-1`,
+        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints/ep-1`,
         'DELETE'
       )).toBe(true);
     });
@@ -237,7 +237,7 @@ describe('useEndpoints', () => {
   describe('clearError', () => {
     it('should clear the error state', async () => {
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/user-123/projects/proj-1/endpoints`,
+        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints`,
         { ok: false, data: { success: false, error: 'Unauthorized' } },
         'GET'
       );
@@ -261,7 +261,7 @@ describe('useEndpoints', () => {
   describe('reset', () => {
     it('should reset all state to initial values', async () => {
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/user-123/projects/proj-1/endpoints`,
+        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints`,
         { ok: true, data: { success: true, data: [{ uuid: 'ep-1', endpoint_name: 'test' }] } },
         'GET'
       );

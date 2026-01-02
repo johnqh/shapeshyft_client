@@ -20,32 +20,32 @@ export interface UseEndpointsReturn {
   error: Optional<string>;
 
   refresh: (
-    userId: string,
+    entitySlug: string,
     projectId: string,
     token: FirebaseIdToken,
     params?: EndpointQueryParams
   ) => Promise<void>;
   getEndpoint: (
-    userId: string,
+    entitySlug: string,
     projectId: string,
     endpointId: string,
     token: FirebaseIdToken
   ) => Promise<BaseResponse<Endpoint>>;
   createEndpoint: (
-    userId: string,
+    entitySlug: string,
     projectId: string,
     data: EndpointCreateRequest,
     token: FirebaseIdToken
   ) => Promise<BaseResponse<Endpoint>>;
   updateEndpoint: (
-    userId: string,
+    entitySlug: string,
     projectId: string,
     endpointId: string,
     data: EndpointUpdateRequest,
     token: FirebaseIdToken
   ) => Promise<BaseResponse<Endpoint>>;
   deleteEndpoint: (
-    userId: string,
+    entitySlug: string,
     projectId: string,
     endpointId: string,
     token: FirebaseIdToken
@@ -81,7 +81,7 @@ export const useEndpoints = (
    */
   const refresh = useCallback(
     async (
-      userId: string,
+      entitySlug: string,
       projectId: string,
       token: FirebaseIdToken,
       params?: EndpointQueryParams
@@ -92,7 +92,7 @@ export const useEndpoints = (
 
       try {
         const response = await client.getEndpoints(
-          userId,
+          entitySlug,
           projectId,
           token,
           params
@@ -119,7 +119,7 @@ export const useEndpoints = (
    */
   const getEndpoint = useCallback(
     async (
-      userId: string,
+      entitySlug: string,
       projectId: string,
       endpointId: string,
       token: FirebaseIdToken
@@ -129,7 +129,7 @@ export const useEndpoints = (
 
       try {
         const response = await client.getEndpoint(
-          userId,
+          entitySlug,
           projectId,
           endpointId,
           token
@@ -157,7 +157,7 @@ export const useEndpoints = (
    */
   const createEndpoint = useCallback(
     async (
-      userId: string,
+      entitySlug: string,
       projectId: string,
       data: EndpointCreateRequest,
       token: FirebaseIdToken
@@ -167,13 +167,13 @@ export const useEndpoints = (
 
       try {
         const response = await client.createEndpoint(
-          userId,
+          entitySlug,
           projectId,
           data,
           token
         );
         if (response.success) {
-          await refresh(userId, projectId, token, lastParams ?? undefined);
+          await refresh(entitySlug, projectId, token, lastParams ?? undefined);
         }
         return response;
       } catch (err) {
@@ -202,7 +202,7 @@ export const useEndpoints = (
    */
   const updateEndpoint = useCallback(
     async (
-      userId: string,
+      entitySlug: string,
       projectId: string,
       endpointId: string,
       data: EndpointUpdateRequest,
@@ -213,14 +213,14 @@ export const useEndpoints = (
 
       try {
         const response = await client.updateEndpoint(
-          userId,
+          entitySlug,
           projectId,
           endpointId,
           data,
           token
         );
         if (response.success) {
-          await refresh(userId, projectId, token, lastParams ?? undefined);
+          await refresh(entitySlug, projectId, token, lastParams ?? undefined);
         }
         return response;
       } catch (err) {
@@ -249,7 +249,7 @@ export const useEndpoints = (
    */
   const deleteEndpoint = useCallback(
     async (
-      userId: string,
+      entitySlug: string,
       projectId: string,
       endpointId: string,
       token: FirebaseIdToken
@@ -259,13 +259,13 @@ export const useEndpoints = (
 
       try {
         const response = await client.deleteEndpoint(
-          userId,
+          entitySlug,
           projectId,
           endpointId,
           token
         );
         if (response.success) {
-          await refresh(userId, projectId, token, lastParams ?? undefined);
+          await refresh(entitySlug, projectId, token, lastParams ?? undefined);
         }
         return response;
       } catch (err) {

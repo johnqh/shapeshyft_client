@@ -18,25 +18,25 @@ export interface UseKeysReturn {
   isLoading: boolean;
   error: Optional<string>;
 
-  refresh: (userId: string, token: FirebaseIdToken) => Promise<void>;
+  refresh: (entitySlug: string, token: FirebaseIdToken) => Promise<void>;
   getKey: (
-    userId: string,
+    entitySlug: string,
     keyId: string,
     token: FirebaseIdToken
   ) => Promise<BaseResponse<LlmApiKeySafe>>;
   createKey: (
-    userId: string,
+    entitySlug: string,
     data: LlmApiKeyCreateRequest,
     token: FirebaseIdToken
   ) => Promise<BaseResponse<LlmApiKeySafe>>;
   updateKey: (
-    userId: string,
+    entitySlug: string,
     keyId: string,
     data: LlmApiKeyUpdateRequest,
     token: FirebaseIdToken
   ) => Promise<BaseResponse<LlmApiKeySafe>>;
   deleteKey: (
-    userId: string,
+    entitySlug: string,
     keyId: string,
     token: FirebaseIdToken
   ) => Promise<BaseResponse<LlmApiKeySafe>>;
@@ -66,12 +66,12 @@ export const useKeys = (
    * Refresh keys list
    */
   const refresh = useCallback(
-    async (userId: string, token: FirebaseIdToken): Promise<void> => {
+    async (entitySlug: string, token: FirebaseIdToken): Promise<void> => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const response = await client.getKeys(userId, token);
+        const response = await client.getKeys(entitySlug, token);
         if (response.success && response.data) {
           setKeys(response.data);
         } else {
@@ -94,7 +94,7 @@ export const useKeys = (
    */
   const getKey = useCallback(
     async (
-      userId: string,
+      entitySlug: string,
       keyId: string,
       token: FirebaseIdToken
     ): Promise<BaseResponse<LlmApiKeySafe>> => {
@@ -102,7 +102,7 @@ export const useKeys = (
       setError(null);
 
       try {
-        const response = await client.getKey(userId, keyId, token);
+        const response = await client.getKey(entitySlug, keyId, token);
         return response;
       } catch (err) {
         const errorMessage =
@@ -126,7 +126,7 @@ export const useKeys = (
    */
   const createKey = useCallback(
     async (
-      userId: string,
+      entitySlug: string,
       data: LlmApiKeyCreateRequest,
       token: FirebaseIdToken
     ): Promise<BaseResponse<LlmApiKeySafe>> => {
@@ -134,10 +134,10 @@ export const useKeys = (
       setError(null);
 
       try {
-        const response = await client.createKey(userId, data, token);
+        const response = await client.createKey(entitySlug, data, token);
         if (response.success) {
           // Refresh the list after successful creation
-          await refresh(userId, token);
+          await refresh(entitySlug, token);
         }
         return response;
       } catch (err) {
@@ -162,7 +162,7 @@ export const useKeys = (
    */
   const updateKey = useCallback(
     async (
-      userId: string,
+      entitySlug: string,
       keyId: string,
       data: LlmApiKeyUpdateRequest,
       token: FirebaseIdToken
@@ -171,10 +171,10 @@ export const useKeys = (
       setError(null);
 
       try {
-        const response = await client.updateKey(userId, keyId, data, token);
+        const response = await client.updateKey(entitySlug, keyId, data, token);
         if (response.success) {
           // Refresh the list after successful update
-          await refresh(userId, token);
+          await refresh(entitySlug, token);
         }
         return response;
       } catch (err) {
@@ -199,7 +199,7 @@ export const useKeys = (
    */
   const deleteKey = useCallback(
     async (
-      userId: string,
+      entitySlug: string,
       keyId: string,
       token: FirebaseIdToken
     ): Promise<BaseResponse<LlmApiKeySafe>> => {
@@ -207,10 +207,10 @@ export const useKeys = (
       setError(null);
 
       try {
-        const response = await client.deleteKey(userId, keyId, token);
+        const response = await client.deleteKey(entitySlug, keyId, token);
         if (response.success) {
           // Refresh the list after successful deletion
-          await refresh(userId, token);
+          await refresh(entitySlug, token);
         }
         return response;
       } catch (err) {

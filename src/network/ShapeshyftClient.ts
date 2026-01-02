@@ -44,15 +44,15 @@ export class ShapeshyftClient {
   }
 
   // =============================================================================
-  // LLM API KEYS (Firebase auth required)
+  // LLM API KEYS (Firebase auth required, entity-scoped)
   // =============================================================================
 
   /**
-   * Get all LLM API keys for a user
-   * GET /api/v1/users/:userId/keys
+   * Get all LLM API keys for an entity
+   * GET /api/v1/entities/:entitySlug/keys
    */
   async getKeys(
-    userId: string,
+    entitySlug: string,
     token: FirebaseIdToken
   ): Promise<BaseResponse<LlmApiKeySafe[]>> {
     const headers = createAuthHeaders(token);
@@ -62,7 +62,7 @@ export class ShapeshyftClient {
     >(
       buildUrl(
         this.baseUrl,
-        `/api/v1/users/${encodeURIComponent(userId)}/keys`
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/keys`
       ),
       {
         headers,
@@ -78,10 +78,10 @@ export class ShapeshyftClient {
 
   /**
    * Get a single LLM API key
-   * GET /api/v1/users/:userId/keys/:keyId
+   * GET /api/v1/entities/:entitySlug/keys/:keyId
    */
   async getKey(
-    userId: string,
+    entitySlug: string,
     keyId: string,
     token: FirebaseIdToken
   ): Promise<BaseResponse<LlmApiKeySafe>> {
@@ -90,7 +90,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.get<BaseResponse<LlmApiKeySafe>>(
       buildUrl(
         this.baseUrl,
-        `/api/v1/users/${encodeURIComponent(userId)}/keys/${encodeURIComponent(keyId)}`
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/keys/${encodeURIComponent(keyId)}`
       ),
       { headers }
     );
@@ -104,10 +104,10 @@ export class ShapeshyftClient {
 
   /**
    * Create a new LLM API key
-   * POST /api/v1/users/:userId/keys
+   * POST /api/v1/entities/:entitySlug/keys
    */
   async createKey(
-    userId: string,
+    entitySlug: string,
     data: LlmApiKeyCreateRequest,
     token: FirebaseIdToken
   ): Promise<BaseResponse<LlmApiKeySafe>> {
@@ -116,7 +116,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.post<BaseResponse<LlmApiKeySafe>>(
       buildUrl(
         this.baseUrl,
-        `/api/v1/users/${encodeURIComponent(userId)}/keys`
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/keys`
       ),
       data,
       { headers }
@@ -131,10 +131,10 @@ export class ShapeshyftClient {
 
   /**
    * Update an LLM API key
-   * PUT /api/v1/users/:userId/keys/:keyId
+   * PUT /api/v1/entities/:entitySlug/keys/:keyId
    */
   async updateKey(
-    userId: string,
+    entitySlug: string,
     keyId: string,
     data: LlmApiKeyUpdateRequest,
     token: FirebaseIdToken
@@ -144,7 +144,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.put<BaseResponse<LlmApiKeySafe>>(
       buildUrl(
         this.baseUrl,
-        `/api/v1/users/${encodeURIComponent(userId)}/keys/${encodeURIComponent(keyId)}`
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/keys/${encodeURIComponent(keyId)}`
       ),
       data,
       { headers }
@@ -159,10 +159,10 @@ export class ShapeshyftClient {
 
   /**
    * Delete an LLM API key
-   * DELETE /api/v1/users/:userId/keys/:keyId
+   * DELETE /api/v1/entities/:entitySlug/keys/:keyId
    */
   async deleteKey(
-    userId: string,
+    entitySlug: string,
     keyId: string,
     token: FirebaseIdToken
   ): Promise<BaseResponse<LlmApiKeySafe>> {
@@ -173,7 +173,7 @@ export class ShapeshyftClient {
     >(
       buildUrl(
         this.baseUrl,
-        `/api/v1/users/${encodeURIComponent(userId)}/keys/${encodeURIComponent(keyId)}`
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/keys/${encodeURIComponent(keyId)}`
       ),
       { headers }
     );
@@ -186,15 +186,15 @@ export class ShapeshyftClient {
   }
 
   // =============================================================================
-  // PROJECTS (Firebase auth required)
+  // PROJECTS (Firebase auth required, entity-scoped)
   // =============================================================================
 
   /**
-   * Get all projects for a user
-   * GET /api/v1/users/:userId/projects
+   * Get all projects for an entity
+   * GET /api/v1/entities/:entitySlug/projects
    */
   async getProjects(
-    userId: string,
+    entitySlug: string,
     token: FirebaseIdToken,
     params?: ProjectQueryParams
   ): Promise<BaseResponse<Project[]>> {
@@ -204,7 +204,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.get<BaseResponse<Project[]>>(
       buildUrl(
         this.baseUrl,
-        `/api/v1/users/${encodeURIComponent(userId)}/projects${queryString}`
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects${queryString}`
       ),
       { headers }
     );
@@ -218,10 +218,10 @@ export class ShapeshyftClient {
 
   /**
    * Get a single project
-   * GET /api/v1/users/:userId/projects/:projectId
+   * GET /api/v1/entities/:entitySlug/projects/:projectId
    */
   async getProject(
-    userId: string,
+    entitySlug: string,
     projectId: string,
     token: FirebaseIdToken
   ): Promise<BaseResponse<Project>> {
@@ -230,7 +230,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.get<BaseResponse<Project>>(
       buildUrl(
         this.baseUrl,
-        `/api/v1/users/${encodeURIComponent(userId)}/projects/${encodeURIComponent(projectId)}`
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}`
       ),
       { headers }
     );
@@ -244,10 +244,10 @@ export class ShapeshyftClient {
 
   /**
    * Create a new project
-   * POST /api/v1/users/:userId/projects
+   * POST /api/v1/entities/:entitySlug/projects
    */
   async createProject(
-    userId: string,
+    entitySlug: string,
     data: ProjectCreateRequest,
     token: FirebaseIdToken
   ): Promise<BaseResponse<Project>> {
@@ -256,7 +256,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.post<BaseResponse<Project>>(
       buildUrl(
         this.baseUrl,
-        `/api/v1/users/${encodeURIComponent(userId)}/projects`
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects`
       ),
       data,
       { headers }
@@ -271,10 +271,10 @@ export class ShapeshyftClient {
 
   /**
    * Update a project
-   * PUT /api/v1/users/:userId/projects/:projectId
+   * PUT /api/v1/entities/:entitySlug/projects/:projectId
    */
   async updateProject(
-    userId: string,
+    entitySlug: string,
     projectId: string,
     data: ProjectUpdateRequest,
     token: FirebaseIdToken
@@ -284,7 +284,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.put<BaseResponse<Project>>(
       buildUrl(
         this.baseUrl,
-        `/api/v1/users/${encodeURIComponent(userId)}/projects/${encodeURIComponent(projectId)}`
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}`
       ),
       data,
       { headers }
@@ -299,10 +299,10 @@ export class ShapeshyftClient {
 
   /**
    * Delete a project
-   * DELETE /api/v1/users/:userId/projects/:projectId
+   * DELETE /api/v1/entities/:entitySlug/projects/:projectId
    */
   async deleteProject(
-    userId: string,
+    entitySlug: string,
     projectId: string,
     token: FirebaseIdToken
   ): Promise<BaseResponse<Project>> {
@@ -311,7 +311,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.delete<BaseResponse<Project>>(
       buildUrl(
         this.baseUrl,
-        `/api/v1/users/${encodeURIComponent(userId)}/projects/${encodeURIComponent(projectId)}`
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}`
       ),
       { headers }
     );
@@ -325,10 +325,10 @@ export class ShapeshyftClient {
 
   /**
    * Get project API key (full key)
-   * GET /api/v1/users/:userId/projects/:projectId/api-key
+   * GET /api/v1/entities/:entitySlug/projects/:projectId/api-key
    */
   async getProjectApiKey(
-    userId: string,
+    entitySlug: string,
     projectId: string,
     token: FirebaseIdToken
   ): Promise<BaseResponse<GetApiKeyResponse>> {
@@ -339,7 +339,7 @@ export class ShapeshyftClient {
     >(
       buildUrl(
         this.baseUrl,
-        `/api/v1/users/${encodeURIComponent(userId)}/projects/${encodeURIComponent(projectId)}/api-key`
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}/api-key`
       ),
       { headers }
     );
@@ -353,10 +353,10 @@ export class ShapeshyftClient {
 
   /**
    * Refresh project API key (generates new key)
-   * POST /api/v1/users/:userId/projects/:projectId/api-key/refresh
+   * POST /api/v1/entities/:entitySlug/projects/:projectId/api-key/refresh
    */
   async refreshProjectApiKey(
-    userId: string,
+    entitySlug: string,
     projectId: string,
     token: FirebaseIdToken
   ): Promise<BaseResponse<RefreshApiKeyResponse>> {
@@ -367,7 +367,7 @@ export class ShapeshyftClient {
     >(
       buildUrl(
         this.baseUrl,
-        `/api/v1/users/${encodeURIComponent(userId)}/projects/${encodeURIComponent(projectId)}/api-key/refresh`
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}/api-key/refresh`
       ),
       {},
       { headers }
@@ -381,15 +381,15 @@ export class ShapeshyftClient {
   }
 
   // =============================================================================
-  // ENDPOINTS (Firebase auth required)
+  // ENDPOINTS (Firebase auth required, entity-scoped)
   // =============================================================================
 
   /**
    * Get all endpoints for a project
-   * GET /api/v1/users/:userId/projects/:projectId/endpoints
+   * GET /api/v1/entities/:entitySlug/projects/:projectId/endpoints
    */
   async getEndpoints(
-    userId: string,
+    entitySlug: string,
     projectId: string,
     token: FirebaseIdToken,
     params?: EndpointQueryParams
@@ -400,7 +400,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.get<BaseResponse<Endpoint[]>>(
       buildUrl(
         this.baseUrl,
-        `/api/v1/users/${encodeURIComponent(userId)}/projects/${encodeURIComponent(projectId)}/endpoints${queryString}`
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}/endpoints${queryString}`
       ),
       { headers }
     );
@@ -414,10 +414,10 @@ export class ShapeshyftClient {
 
   /**
    * Get a single endpoint
-   * GET /api/v1/users/:userId/projects/:projectId/endpoints/:endpointId
+   * GET /api/v1/entities/:entitySlug/projects/:projectId/endpoints/:endpointId
    */
   async getEndpoint(
-    userId: string,
+    entitySlug: string,
     projectId: string,
     endpointId: string,
     token: FirebaseIdToken
@@ -427,7 +427,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.get<BaseResponse<Endpoint>>(
       buildUrl(
         this.baseUrl,
-        `/api/v1/users/${encodeURIComponent(userId)}/projects/${encodeURIComponent(projectId)}/endpoints/${encodeURIComponent(endpointId)}`
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}/endpoints/${encodeURIComponent(endpointId)}`
       ),
       { headers }
     );
@@ -441,10 +441,10 @@ export class ShapeshyftClient {
 
   /**
    * Create a new endpoint
-   * POST /api/v1/users/:userId/projects/:projectId/endpoints
+   * POST /api/v1/entities/:entitySlug/projects/:projectId/endpoints
    */
   async createEndpoint(
-    userId: string,
+    entitySlug: string,
     projectId: string,
     data: EndpointCreateRequest,
     token: FirebaseIdToken
@@ -454,7 +454,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.post<BaseResponse<Endpoint>>(
       buildUrl(
         this.baseUrl,
-        `/api/v1/users/${encodeURIComponent(userId)}/projects/${encodeURIComponent(projectId)}/endpoints`
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}/endpoints`
       ),
       data,
       { headers }
@@ -469,10 +469,10 @@ export class ShapeshyftClient {
 
   /**
    * Update an endpoint
-   * PUT /api/v1/users/:userId/projects/:projectId/endpoints/:endpointId
+   * PUT /api/v1/entities/:entitySlug/projects/:projectId/endpoints/:endpointId
    */
   async updateEndpoint(
-    userId: string,
+    entitySlug: string,
     projectId: string,
     endpointId: string,
     data: EndpointUpdateRequest,
@@ -483,7 +483,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.put<BaseResponse<Endpoint>>(
       buildUrl(
         this.baseUrl,
-        `/api/v1/users/${encodeURIComponent(userId)}/projects/${encodeURIComponent(projectId)}/endpoints/${encodeURIComponent(endpointId)}`
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}/endpoints/${encodeURIComponent(endpointId)}`
       ),
       data,
       { headers }
@@ -498,10 +498,10 @@ export class ShapeshyftClient {
 
   /**
    * Delete an endpoint
-   * DELETE /api/v1/users/:userId/projects/:projectId/endpoints/:endpointId
+   * DELETE /api/v1/entities/:entitySlug/projects/:projectId/endpoints/:endpointId
    */
   async deleteEndpoint(
-    userId: string,
+    entitySlug: string,
     projectId: string,
     endpointId: string,
     token: FirebaseIdToken
@@ -511,7 +511,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.delete<BaseResponse<Endpoint>>(
       buildUrl(
         this.baseUrl,
-        `/api/v1/users/${encodeURIComponent(userId)}/projects/${encodeURIComponent(projectId)}/endpoints/${encodeURIComponent(endpointId)}`
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}/endpoints/${encodeURIComponent(endpointId)}`
       ),
       { headers }
     );

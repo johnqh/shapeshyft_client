@@ -50,7 +50,7 @@ describe('ShapeshyftClient', () => {
         const result = await client.getKeys(userId, token);
 
         expect(mockNetworkClient.get).toHaveBeenCalledWith(
-          `${baseUrl}/api/v1/users/${userId}/keys`,
+          `${baseUrl}/api/v1/entities/${userId}/keys`,
           expect.objectContaining({
             headers: expect.objectContaining({
               Authorization: `Bearer ${token}`,
@@ -83,7 +83,7 @@ describe('ShapeshyftClient', () => {
         const result = await client.getKey(userId, keyId, token);
 
         expect(mockNetworkClient.get).toHaveBeenCalledWith(
-          `${baseUrl}/api/v1/users/${userId}/keys/${keyId}`,
+          `${baseUrl}/api/v1/entities/${userId}/keys/${keyId}`,
           expect.any(Object)
         );
         expect(result.data).toEqual(mockKey);
@@ -106,7 +106,7 @@ describe('ShapeshyftClient', () => {
         const result = await client.createKey(userId, createData, token);
 
         expect(mockNetworkClient.post).toHaveBeenCalledWith(
-          `${baseUrl}/api/v1/users/${userId}/keys`,
+          `${baseUrl}/api/v1/entities/${userId}/keys`,
           createData,
           expect.any(Object)
         );
@@ -126,7 +126,7 @@ describe('ShapeshyftClient', () => {
         const result = await client.updateKey(userId, keyId, updateData, token);
 
         expect(mockNetworkClient.put).toHaveBeenCalledWith(
-          `${baseUrl}/api/v1/users/${userId}/keys/${keyId}`,
+          `${baseUrl}/api/v1/entities/${userId}/keys/${keyId}`,
           updateData,
           expect.any(Object)
         );
@@ -145,7 +145,7 @@ describe('ShapeshyftClient', () => {
         const result = await client.deleteKey(userId, keyId, token);
 
         expect(mockNetworkClient.delete).toHaveBeenCalledWith(
-          `${baseUrl}/api/v1/users/${userId}/keys/${keyId}`,
+          `${baseUrl}/api/v1/entities/${userId}/keys/${keyId}`,
           expect.any(Object)
         );
         expect(result.data).toEqual(mockKey);
@@ -175,7 +175,7 @@ describe('ShapeshyftClient', () => {
         const result = await client.getProjects(userId, token);
 
         expect(mockNetworkClient.get).toHaveBeenCalledWith(
-          `${baseUrl}/api/v1/users/${userId}/projects`,
+          `${baseUrl}/api/v1/entities/${userId}/projects`,
           expect.any(Object)
         );
         expect(result.data).toEqual(mockProjects);
@@ -190,7 +190,7 @@ describe('ShapeshyftClient', () => {
         await client.getProjects(userId, token, { is_active: 'true' });
 
         expect(mockNetworkClient.get).toHaveBeenCalledWith(
-          `${baseUrl}/api/v1/users/${userId}/projects?is_active=true`,
+          `${baseUrl}/api/v1/entities/${userId}/projects?is_active=true`,
           expect.any(Object)
         );
       });
@@ -224,7 +224,7 @@ describe('ShapeshyftClient', () => {
         const result = await client.createProject(userId, createData, token);
 
         expect(mockNetworkClient.post).toHaveBeenCalledWith(
-          `${baseUrl}/api/v1/users/${userId}/projects`,
+          `${baseUrl}/api/v1/entities/${userId}/projects`,
           createData,
           expect.any(Object)
         );
@@ -243,7 +243,7 @@ describe('ShapeshyftClient', () => {
         await client.updateProject(userId, projectId, updateData, token);
 
         expect(mockNetworkClient.put).toHaveBeenCalledWith(
-          `${baseUrl}/api/v1/users/${userId}/projects/${projectId}`,
+          `${baseUrl}/api/v1/entities/${userId}/projects/${projectId}`,
           updateData,
           expect.any(Object)
         );
@@ -260,7 +260,7 @@ describe('ShapeshyftClient', () => {
         await client.deleteProject(userId, projectId, token);
 
         expect(mockNetworkClient.delete).toHaveBeenCalledWith(
-          `${baseUrl}/api/v1/users/${userId}/projects/${projectId}`,
+          `${baseUrl}/api/v1/entities/${userId}/projects/${projectId}`,
           expect.any(Object)
         );
       });
@@ -290,7 +290,7 @@ describe('ShapeshyftClient', () => {
         const result = await client.getEndpoints(userId, projectId, token);
 
         expect(mockNetworkClient.get).toHaveBeenCalledWith(
-          `${baseUrl}/api/v1/users/${userId}/projects/${projectId}/endpoints`,
+          `${baseUrl}/api/v1/entities/${userId}/projects/${projectId}/endpoints`,
           expect.any(Object)
         );
         expect(result.data).toEqual(mockEndpoints);
@@ -326,7 +326,7 @@ describe('ShapeshyftClient', () => {
         await client.createEndpoint(userId, projectId, createData, token);
 
         expect(mockNetworkClient.post).toHaveBeenCalledWith(
-          `${baseUrl}/api/v1/users/${userId}/projects/${projectId}/endpoints`,
+          `${baseUrl}/api/v1/entities/${userId}/projects/${projectId}/endpoints`,
           createData,
           expect.any(Object)
         );
@@ -344,7 +344,7 @@ describe('ShapeshyftClient', () => {
         await client.updateEndpoint(userId, projectId, endpointId, updateData, token);
 
         expect(mockNetworkClient.put).toHaveBeenCalledWith(
-          `${baseUrl}/api/v1/users/${userId}/projects/${projectId}/endpoints/${endpointId}`,
+          `${baseUrl}/api/v1/entities/${userId}/projects/${projectId}/endpoints/${endpointId}`,
           updateData,
           expect.any(Object)
         );
@@ -361,7 +361,7 @@ describe('ShapeshyftClient', () => {
         await client.deleteEndpoint(userId, projectId, endpointId, token);
 
         expect(mockNetworkClient.delete).toHaveBeenCalledWith(
-          `${baseUrl}/api/v1/users/${userId}/projects/${projectId}/endpoints/${endpointId}`,
+          `${baseUrl}/api/v1/entities/${userId}/projects/${projectId}/endpoints/${endpointId}`,
           expect.any(Object)
         );
       });

@@ -22,38 +22,38 @@ export interface UseProjectsReturn {
   error: Optional<string>;
 
   refresh: (
-    userId: string,
+    entitySlug: string,
     token: FirebaseIdToken,
     params?: ProjectQueryParams
   ) => Promise<void>;
   getProject: (
-    userId: string,
+    entitySlug: string,
     projectId: string,
     token: FirebaseIdToken
   ) => Promise<BaseResponse<Project>>;
   createProject: (
-    userId: string,
+    entitySlug: string,
     data: ProjectCreateRequest,
     token: FirebaseIdToken
   ) => Promise<BaseResponse<Project>>;
   updateProject: (
-    userId: string,
+    entitySlug: string,
     projectId: string,
     data: ProjectUpdateRequest,
     token: FirebaseIdToken
   ) => Promise<BaseResponse<Project>>;
   deleteProject: (
-    userId: string,
+    entitySlug: string,
     projectId: string,
     token: FirebaseIdToken
   ) => Promise<BaseResponse<Project>>;
   getProjectApiKey: (
-    userId: string,
+    entitySlug: string,
     projectId: string,
     token: FirebaseIdToken
   ) => Promise<BaseResponse<GetApiKeyResponse>>;
   refreshProjectApiKey: (
-    userId: string,
+    entitySlug: string,
     projectId: string,
     token: FirebaseIdToken
   ) => Promise<BaseResponse<RefreshApiKeyResponse>>;
@@ -88,7 +88,7 @@ export const useProjects = (
    */
   const refresh = useCallback(
     async (
-      userId: string,
+      entitySlug: string,
       token: FirebaseIdToken,
       params?: ProjectQueryParams
     ): Promise<void> => {
@@ -97,7 +97,7 @@ export const useProjects = (
       setLastParams(params);
 
       try {
-        const response = await client.getProjects(userId, token, params);
+        const response = await client.getProjects(entitySlug, token, params);
         if (response.success && response.data) {
           setProjects(response.data);
         } else {
@@ -120,7 +120,7 @@ export const useProjects = (
    */
   const getProject = useCallback(
     async (
-      userId: string,
+      entitySlug: string,
       projectId: string,
       token: FirebaseIdToken
     ): Promise<BaseResponse<Project>> => {
@@ -128,7 +128,7 @@ export const useProjects = (
       setError(null);
 
       try {
-        const response = await client.getProject(userId, projectId, token);
+        const response = await client.getProject(entitySlug, projectId, token);
         return response;
       } catch (err) {
         const errorMessage =
@@ -152,7 +152,7 @@ export const useProjects = (
    */
   const createProject = useCallback(
     async (
-      userId: string,
+      entitySlug: string,
       data: ProjectCreateRequest,
       token: FirebaseIdToken
     ): Promise<BaseResponse<Project>> => {
@@ -160,9 +160,9 @@ export const useProjects = (
       setError(null);
 
       try {
-        const response = await client.createProject(userId, data, token);
+        const response = await client.createProject(entitySlug, data, token);
         if (response.success) {
-          await refresh(userId, token, lastParams ?? undefined);
+          await refresh(entitySlug, token, lastParams ?? undefined);
         }
         return response;
       } catch (err) {
@@ -187,7 +187,7 @@ export const useProjects = (
    */
   const updateProject = useCallback(
     async (
-      userId: string,
+      entitySlug: string,
       projectId: string,
       data: ProjectUpdateRequest,
       token: FirebaseIdToken
@@ -197,13 +197,13 @@ export const useProjects = (
 
       try {
         const response = await client.updateProject(
-          userId,
+          entitySlug,
           projectId,
           data,
           token
         );
         if (response.success) {
-          await refresh(userId, token, lastParams ?? undefined);
+          await refresh(entitySlug, token, lastParams ?? undefined);
         }
         return response;
       } catch (err) {
@@ -228,7 +228,7 @@ export const useProjects = (
    */
   const deleteProject = useCallback(
     async (
-      userId: string,
+      entitySlug: string,
       projectId: string,
       token: FirebaseIdToken
     ): Promise<BaseResponse<Project>> => {
@@ -236,9 +236,13 @@ export const useProjects = (
       setError(null);
 
       try {
-        const response = await client.deleteProject(userId, projectId, token);
+        const response = await client.deleteProject(
+          entitySlug,
+          projectId,
+          token
+        );
         if (response.success) {
-          await refresh(userId, token, lastParams ?? undefined);
+          await refresh(entitySlug, token, lastParams ?? undefined);
         }
         return response;
       } catch (err) {
@@ -263,7 +267,7 @@ export const useProjects = (
    */
   const getProjectApiKey = useCallback(
     async (
-      userId: string,
+      entitySlug: string,
       projectId: string,
       token: FirebaseIdToken
     ): Promise<BaseResponse<GetApiKeyResponse>> => {
@@ -272,7 +276,7 @@ export const useProjects = (
 
       try {
         const response = await client.getProjectApiKey(
-          userId,
+          entitySlug,
           projectId,
           token
         );
@@ -303,7 +307,7 @@ export const useProjects = (
    */
   const refreshProjectApiKey = useCallback(
     async (
-      userId: string,
+      entitySlug: string,
       projectId: string,
       token: FirebaseIdToken
     ): Promise<BaseResponse<RefreshApiKeyResponse>> => {
@@ -312,13 +316,13 @@ export const useProjects = (
 
       try {
         const response = await client.refreshProjectApiKey(
-          userId,
+          entitySlug,
           projectId,
           token
         );
         if (response.success) {
           // Refresh projects list to get updated api_key_prefix
-          await refresh(userId, token, lastParams ?? undefined);
+          await refresh(entitySlug, token, lastParams ?? undefined);
         }
         return response;
       } catch (err) {
