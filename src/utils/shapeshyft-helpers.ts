@@ -24,6 +24,17 @@ export function createHeaders(): Record<string, string> {
 }
 
 /**
+ * Helper method to create headers with API key for AI endpoints
+ */
+export function createApiKeyHeaders(apiKey: string): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    Authorization: `Bearer ${apiKey}`,
+  };
+}
+
+/**
  * Helper method to build full URL from base URL and path
  */
 export function buildUrl(baseUrl: string, path: string): string {

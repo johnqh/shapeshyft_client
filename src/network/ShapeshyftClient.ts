@@ -27,6 +27,7 @@ import {
   buildUrl,
   createAuthHeaders,
   createHeaders,
+  createApiKeyHeaders,
   handleApiError,
 } from '../utils/shapeshyft-helpers';
 
@@ -613,7 +614,7 @@ export class ShapeshyftClient {
   }
 
   // =============================================================================
-  // AI EXECUTION (Public, no auth)
+  // AI EXECUTION (Requires project API key)
   // =============================================================================
 
   /**
@@ -624,9 +625,10 @@ export class ShapeshyftClient {
     organizationPath: string,
     projectName: string,
     endpointName: string,
-    input: unknown
+    input: unknown,
+    apiKey?: string
   ): Promise<BaseResponse<AiExecutionResponse | AiPromptResponse>> {
-    const headers = createHeaders();
+    const headers = apiKey ? createApiKeyHeaders(apiKey) : createHeaders();
     const queryString = input
       ? buildQueryString({ input: JSON.stringify(input) })
       : '';
@@ -656,9 +658,10 @@ export class ShapeshyftClient {
     organizationPath: string,
     projectName: string,
     endpointName: string,
-    input: unknown
+    input: unknown,
+    apiKey?: string
   ): Promise<BaseResponse<AiExecutionResponse | AiPromptResponse>> {
-    const headers = createHeaders();
+    const headers = apiKey ? createApiKeyHeaders(apiKey) : createHeaders();
 
     const response = await this.networkClient.post<
       BaseResponse<AiExecutionResponse | AiPromptResponse>
@@ -686,21 +689,24 @@ export class ShapeshyftClient {
     projectName: string,
     endpointName: string,
     input: unknown,
-    method: 'GET' | 'POST' = 'POST'
+    method: 'GET' | 'POST' = 'POST',
+    apiKey?: string
   ): Promise<BaseResponse<AiExecutionResponse | AiPromptResponse>> {
     if (method === 'GET') {
       return this.executeAiGet(
         organizationPath,
         projectName,
         endpointName,
-        input
+        input,
+        apiKey
       );
     }
     return this.executeAiPost(
       organizationPath,
       projectName,
       endpointName,
-      input
+      input,
+      apiKey
     );
   }
 
@@ -712,9 +718,10 @@ export class ShapeshyftClient {
     organizationPath: string,
     projectName: string,
     endpointName: string,
-    input: unknown
+    input: unknown,
+    apiKey?: string
   ): Promise<BaseResponse<AiPromptResponse>> {
-    const headers = createHeaders();
+    const headers = apiKey ? createApiKeyHeaders(apiKey) : createHeaders();
 
     const response = await this.networkClient.post<
       BaseResponse<AiPromptResponse>
