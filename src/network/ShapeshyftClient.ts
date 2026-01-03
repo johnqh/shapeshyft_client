@@ -25,9 +25,9 @@ import type { FirebaseIdToken } from '../types';
 import {
   buildQueryString,
   buildUrl,
+  createApiKeyHeaders,
   createAuthHeaders,
   createHeaders,
-  createApiKeyHeaders,
   handleApiError,
 } from '../utils/shapeshyft-helpers';
 
