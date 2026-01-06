@@ -22,4 +22,17 @@ export const QUERY_KEYS = {
   endpoint: (userId: string, projectId: string, endpointId: string) =>
     ['shapeshyft', 'endpoints', userId, projectId, endpointId] as const,
   analytics: (userId: string) => ['shapeshyft', 'analytics', userId] as const,
+  // Entity query keys
+  entities: () => ['shapeshyft', 'entities'] as const,
+  entity: (entitySlug: string) =>
+    ['shapeshyft', 'entities', entitySlug] as const,
+  entityMembers: (entitySlug: string) =>
+    ['shapeshyft', 'entities', entitySlug, 'members'] as const,
+  entityInvitations: (entitySlug: string) =>
+    ['shapeshyft', 'entities', entitySlug, 'invitations'] as const,
+  myInvitations: () => ['shapeshyft', 'invitations', 'mine'] as const,
+  // Rate limit query keys
+  rateLimitsConfig: () => ['shapeshyft', 'ratelimits', 'config'] as const,
+  rateLimitsHistory: (periodType: string) =>
+    ['shapeshyft', 'ratelimits', 'history', periodType] as const,
 } as const;

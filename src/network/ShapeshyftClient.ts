@@ -21,6 +21,19 @@ import type {
   UserSettings,
   UserSettingsUpdateRequest,
 } from '@sudobility/shapeshyft_types';
+import type {
+  CreateEntityRequest,
+  Entity,
+  EntityInvitation,
+  EntityMember,
+  EntityRole,
+  EntityWithRole,
+  InviteMemberRequest,
+  UpdateEntityRequest,
+  RateLimitsConfigData,
+  RateLimitHistoryData,
+  RateLimitPeriodType,
+} from '@sudobility/types';
 import type { FirebaseIdToken } from '../types';
 import {
   buildQueryString,
@@ -736,6 +749,424 @@ export class ShapeshyftClient {
 
     if (!response.ok || !response.data) {
       throw handleApiError(response, 'get AI prompt');
+    }
+
+    return response.data;
+  }
+
+  // =============================================================================
+  // ENTITIES (Firebase auth required)
+  // =============================================================================
+
+  /**
+   * Get all entities for the current user
+   * GET /api/v1/entities
+   */
+  async getEntities(
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<EntityWithRole[]>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.get<
+      BaseResponse<EntityWithRole[]>
+    >(buildUrl(this.baseUrl, '/api/v1/entities'), { headers });
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'get entities');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Get a single entity by slug
+   * GET /api/v1/entities/:entitySlug
+   */
+  async getEntity(
+    entitySlug: string,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<EntityWithRole>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.get<BaseResponse<EntityWithRole>>(
+      buildUrl(
+        this.baseUrl,
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}`
+      ),
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'get entity');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Create a new organization entity
+   * POST /api/v1/entities
+   */
+  async createEntity(
+    data: CreateEntityRequest,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<Entity>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.post<BaseResponse<Entity>>(
+      buildUrl(this.baseUrl, '/api/v1/entities'),
+      data,
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'create entity');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Update an entity
+   * PUT /api/v1/entities/:entitySlug
+   */
+  async updateEntity(
+    entitySlug: string,
+    data: UpdateEntityRequest,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<Entity>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.put<BaseResponse<Entity>>(
+      buildUrl(
+        this.baseUrl,
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}`
+      ),
+      data,
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'update entity');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Delete an entity
+   * DELETE /api/v1/entities/:entitySlug
+   */
+  async deleteEntity(
+    entitySlug: string,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<void>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.delete<BaseResponse<void>>(
+      buildUrl(
+        this.baseUrl,
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}`
+      ),
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'delete entity');
+    }
+
+    return response.data;
+  }
+
+  // =============================================================================
+  // ENTITY MEMBERS (Firebase auth required)
+  // =============================================================================
+
+  /**
+   * Get all members of an entity
+   * GET /api/v1/entities/:entitySlug/members
+   */
+  async getEntityMembers(
+    entitySlug: string,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<EntityMember[]>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.get<
+      BaseResponse<EntityMember[]>
+    >(
+      buildUrl(
+        this.baseUrl,
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/members`
+      ),
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'get entity members');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Update a member's role
+   * PUT /api/v1/entities/:entitySlug/members/:memberId
+   */
+  async updateEntityMemberRole(
+    entitySlug: string,
+    memberId: string,
+    role: EntityRole,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<EntityMember>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.put<BaseResponse<EntityMember>>(
+      buildUrl(
+        this.baseUrl,
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/members/${encodeURIComponent(memberId)}`
+      ),
+      { role },
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'update entity member role');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Remove a member from an entity
+   * DELETE /api/v1/entities/:entitySlug/members/:memberId
+   */
+  async removeEntityMember(
+    entitySlug: string,
+    memberId: string,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<void>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.delete<BaseResponse<void>>(
+      buildUrl(
+        this.baseUrl,
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/members/${encodeURIComponent(memberId)}`
+      ),
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'remove entity member');
+    }
+
+    return response.data;
+  }
+
+  // =============================================================================
+  // ENTITY INVITATIONS (Firebase auth required)
+  // =============================================================================
+
+  /**
+   * Get all invitations for an entity
+   * GET /api/v1/entities/:entitySlug/invitations
+   */
+  async getEntityInvitations(
+    entitySlug: string,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<EntityInvitation[]>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.get<
+      BaseResponse<EntityInvitation[]>
+    >(
+      buildUrl(
+        this.baseUrl,
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/invitations`
+      ),
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'get entity invitations');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Create an invitation to join an entity
+   * POST /api/v1/entities/:entitySlug/invitations
+   */
+  async createEntityInvitation(
+    entitySlug: string,
+    data: InviteMemberRequest,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<EntityInvitation>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.post<
+      BaseResponse<EntityInvitation>
+    >(
+      buildUrl(
+        this.baseUrl,
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/invitations`
+      ),
+      data,
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'create entity invitation');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Cancel an invitation
+   * DELETE /api/v1/entities/:entitySlug/invitations/:invitationId
+   */
+  async cancelEntityInvitation(
+    entitySlug: string,
+    invitationId: string,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<void>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.delete<BaseResponse<void>>(
+      buildUrl(
+        this.baseUrl,
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/invitations/${encodeURIComponent(invitationId)}`
+      ),
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'cancel entity invitation');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Get pending invitations for the current user
+   * GET /api/v1/invitations
+   */
+  async getMyInvitations(
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<EntityInvitation[]>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.get<
+      BaseResponse<EntityInvitation[]>
+    >(buildUrl(this.baseUrl, '/api/v1/invitations'), { headers });
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'get my invitations');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Accept an invitation
+   * POST /api/v1/invitations/:token/accept
+   */
+  async acceptInvitation(
+    invitationToken: string,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<void>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.post<BaseResponse<void>>(
+      buildUrl(
+        this.baseUrl,
+        `/api/v1/invitations/${encodeURIComponent(invitationToken)}/accept`
+      ),
+      {},
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'accept invitation');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Decline an invitation
+   * POST /api/v1/invitations/:token/decline
+   */
+  async declineInvitation(
+    invitationToken: string,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<void>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.post<BaseResponse<void>>(
+      buildUrl(
+        this.baseUrl,
+        `/api/v1/invitations/${encodeURIComponent(invitationToken)}/decline`
+      ),
+      {},
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'decline invitation');
+    }
+
+    return response.data;
+  }
+
+  // =============================================================================
+  // RATE LIMITS (Firebase auth required)
+  // =============================================================================
+
+  /**
+   * Get rate limit configuration and current usage
+   * GET /api/v1/ratelimits
+   */
+  async getRateLimitsConfig(
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<RateLimitsConfigData>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.get<
+      BaseResponse<RateLimitsConfigData>
+    >(buildUrl(this.baseUrl, '/api/v1/ratelimits'), { headers });
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'get rate limits config');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Get rate limit usage history for a specific period type
+   * GET /api/v1/ratelimits/history/:periodType
+   */
+  async getRateLimitHistory(
+    periodType: RateLimitPeriodType | 'hour' | 'day' | 'month',
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<RateLimitHistoryData>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.get<
+      BaseResponse<RateLimitHistoryData>
+    >(
+      buildUrl(
+        this.baseUrl,
+        `/api/v1/ratelimits/history/${encodeURIComponent(periodType)}`
+      ),
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'get rate limit history');
     }
 
     return response.data;
