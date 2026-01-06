@@ -61,11 +61,12 @@ export interface UseEndpointsReturn {
  */
 export const useEndpoints = (
   networkClient: NetworkClient,
-  baseUrl: string
+  baseUrl: string,
+  testMode: boolean = false
 ): UseEndpointsReturn => {
   const client = useMemo(
-    () => new ShapeshyftClient({ baseUrl, networkClient }),
-    [baseUrl, networkClient]
+    () => new ShapeshyftClient({ baseUrl, networkClient, testMode }),
+    [baseUrl, networkClient, testMode]
   );
 
   const [endpoints, setEndpoints] = useState<Endpoint[]>([]);

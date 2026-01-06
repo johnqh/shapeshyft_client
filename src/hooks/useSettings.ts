@@ -34,11 +34,12 @@ export interface UseSettingsReturn {
  */
 export const useSettings = (
   networkClient: NetworkClient,
-  baseUrl: string
+  baseUrl: string,
+  testMode: boolean = false
 ): UseSettingsReturn => {
   const client = useMemo(
-    () => new ShapeshyftClient({ baseUrl, networkClient }),
-    [baseUrl, networkClient]
+    () => new ShapeshyftClient({ baseUrl, networkClient, testMode }),
+    [baseUrl, networkClient, testMode]
   );
 
   const [settings, setSettings] = useState<Optional<UserSettings>>(null);

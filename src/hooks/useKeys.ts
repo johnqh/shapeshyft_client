@@ -51,11 +51,12 @@ export interface UseKeysReturn {
  */
 export const useKeys = (
   networkClient: NetworkClient,
-  baseUrl: string
+  baseUrl: string,
+  testMode: boolean = false
 ): UseKeysReturn => {
   const client = useMemo(
-    () => new ShapeshyftClient({ baseUrl, networkClient }),
-    [baseUrl, networkClient]
+    () => new ShapeshyftClient({ baseUrl, networkClient, testMode }),
+    [baseUrl, networkClient, testMode]
   );
 
   const [keys, setKeys] = useState<LlmApiKeySafe[]>([]);

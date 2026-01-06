@@ -32,11 +32,12 @@ export interface UseAnalyticsReturn {
  */
 export const useAnalytics = (
   networkClient: NetworkClient,
-  baseUrl: string
+  baseUrl: string,
+  testMode: boolean = false
 ): UseAnalyticsReturn => {
   const client = useMemo(
-    () => new ShapeshyftClient({ baseUrl, networkClient }),
-    [baseUrl, networkClient]
+    () => new ShapeshyftClient({ baseUrl, networkClient, testMode }),
+    [baseUrl, networkClient, testMode]
   );
 
   const [analytics, setAnalytics] = useState<Optional<AnalyticsResponse>>(null);

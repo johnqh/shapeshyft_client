@@ -49,11 +49,12 @@ export interface UseAiExecuteReturn {
  */
 export const useAiExecute = (
   networkClient: NetworkClient,
-  baseUrl: string
+  baseUrl: string,
+  testMode: boolean = false
 ): UseAiExecuteReturn => {
   const client = useMemo(
-    () => new ShapeshyftClient({ baseUrl, networkClient }),
-    [baseUrl, networkClient]
+    () => new ShapeshyftClient({ baseUrl, networkClient, testMode }),
+    [baseUrl, networkClient, testMode]
   );
 
   const [result, setResult] = useState<Optional<AiResult>>(null);

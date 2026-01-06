@@ -34,11 +34,12 @@ export interface UseRateLimitsReturn {
  */
 export const useRateLimits = (
   networkClient: NetworkClient,
-  baseUrl: string
+  baseUrl: string,
+  testMode: boolean = false
 ): UseRateLimitsReturn => {
   const client = useMemo(
-    () => new ShapeshyftClient({ baseUrl, networkClient }),
-    [baseUrl, networkClient]
+    () => new ShapeshyftClient({ baseUrl, networkClient, testMode }),
+    [baseUrl, networkClient, testMode]
   );
 
   const [config, setConfig] = useState<Optional<RateLimitsConfigData>>(null);

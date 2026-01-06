@@ -51,10 +51,37 @@ import {
 export class ShapeshyftClient {
   private readonly baseUrl: string;
   private readonly networkClient: NetworkClient;
+  private readonly testMode: boolean;
 
-  constructor(config: { baseUrl: string; networkClient: NetworkClient }) {
+  constructor(config: {
+    baseUrl: string;
+    networkClient: NetworkClient;
+    testMode?: boolean;
+  }) {
     this.baseUrl = config.baseUrl;
     this.networkClient = config.networkClient;
+    this.testMode = config.testMode ?? false;
+  }
+
+  /**
+   * Get test mode params to append to all requests
+   */
+  private getTestModeParams(): Record<string, string> {
+    return this.testMode ? { testMode: 'true' } : {};
+  }
+
+  /**
+   * Build URL with optional test mode params
+   */
+  private buildUrlWithTestMode<T extends object>(
+    path: string,
+    existingParams?: T
+  ): string {
+    const testModeParams = this.getTestModeParams();
+    const allParams = { ...existingParams, ...testModeParams };
+    const hasParams = Object.keys(allParams).length > 0;
+    const queryString = hasParams ? buildQueryString(allParams) : '';
+    return buildUrl(this.baseUrl, `${path}${queryString}`);
   }
 
   // =============================================================================
@@ -74,8 +101,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.get<
       BaseResponse<LlmApiKeySafe[]>
     >(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/keys`
       ),
       {
@@ -102,8 +128,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.get<BaseResponse<LlmApiKeySafe>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/keys/${encodeURIComponent(keyId)}`
       ),
       { headers }
@@ -128,8 +153,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.post<BaseResponse<LlmApiKeySafe>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/keys`
       ),
       data,
@@ -156,8 +180,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.put<BaseResponse<LlmApiKeySafe>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/keys/${encodeURIComponent(keyId)}`
       ),
       data,
@@ -185,8 +208,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.delete<
       BaseResponse<LlmApiKeySafe>
     >(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/keys/${encodeURIComponent(keyId)}`
       ),
       { headers }
@@ -213,12 +235,11 @@ export class ShapeshyftClient {
     params?: ProjectQueryParams
   ): Promise<BaseResponse<Project[]>> {
     const headers = createAuthHeaders(token);
-    const queryString = params ? buildQueryString(params) : '';
 
     const response = await this.networkClient.get<BaseResponse<Project[]>>(
-      buildUrl(
-        this.baseUrl,
-        `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects${queryString}`
+      this.buildUrlWithTestMode(
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects`,
+        params
       ),
       { headers }
     );
@@ -242,8 +263,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.get<BaseResponse<Project>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}`
       ),
       { headers }
@@ -268,8 +288,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.post<BaseResponse<Project>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects`
       ),
       data,
@@ -296,8 +315,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.put<BaseResponse<Project>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}`
       ),
       data,
@@ -323,8 +341,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.delete<BaseResponse<Project>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}`
       ),
       { headers }
@@ -351,8 +368,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.get<
       BaseResponse<GetApiKeyResponse>
     >(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}/api-key`
       ),
       { headers }
@@ -379,8 +395,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.post<
       BaseResponse<RefreshApiKeyResponse>
     >(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}/api-key/refresh`
       ),
       {},
@@ -409,12 +424,11 @@ export class ShapeshyftClient {
     params?: EndpointQueryParams
   ): Promise<BaseResponse<Endpoint[]>> {
     const headers = createAuthHeaders(token);
-    const queryString = params ? buildQueryString(params) : '';
 
     const response = await this.networkClient.get<BaseResponse<Endpoint[]>>(
-      buildUrl(
-        this.baseUrl,
-        `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}/endpoints${queryString}`
+      this.buildUrlWithTestMode(
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}/endpoints`,
+        params
       ),
       { headers }
     );
@@ -439,8 +453,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.get<BaseResponse<Endpoint>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}/endpoints/${encodeURIComponent(endpointId)}`
       ),
       { headers }
@@ -466,8 +479,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.post<BaseResponse<Endpoint>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}/endpoints`
       ),
       data,
@@ -495,8 +507,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.put<BaseResponse<Endpoint>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}/endpoints/${encodeURIComponent(endpointId)}`
       ),
       data,
@@ -523,8 +534,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.delete<BaseResponse<Endpoint>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/projects/${encodeURIComponent(projectId)}/endpoints/${encodeURIComponent(endpointId)}`
       ),
       { headers }
@@ -551,14 +561,13 @@ export class ShapeshyftClient {
     params?: UsageAnalyticsQueryParams
   ): Promise<BaseResponse<AnalyticsResponse>> {
     const headers = createAuthHeaders(token);
-    const queryString = params ? buildQueryString(params) : '';
 
     const response = await this.networkClient.get<
       BaseResponse<AnalyticsResponse>
     >(
-      buildUrl(
-        this.baseUrl,
-        `/api/v1/users/${encodeURIComponent(userId)}/analytics${queryString}`
+      this.buildUrlWithTestMode(
+        `/api/v1/users/${encodeURIComponent(userId)}/analytics`,
+        params
       ),
       { headers }
     );
@@ -585,8 +594,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.get<BaseResponse<UserSettings>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/users/${encodeURIComponent(userId)}/settings`
       ),
       { headers }
@@ -611,8 +619,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.put<BaseResponse<UserSettings>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/users/${encodeURIComponent(userId)}/settings`
       ),
       data,
@@ -642,16 +649,14 @@ export class ShapeshyftClient {
     apiKey?: string
   ): Promise<BaseResponse<AiExecutionResponse | AiPromptResponse>> {
     const headers = apiKey ? createApiKeyHeaders(apiKey) : createHeaders();
-    const queryString = input
-      ? buildQueryString({ input: JSON.stringify(input) })
-      : '';
+    const inputParams = input ? { input: JSON.stringify(input) } : {};
 
     const response = await this.networkClient.get<
       BaseResponse<AiExecutionResponse | AiPromptResponse>
     >(
-      buildUrl(
-        this.baseUrl,
-        `/api/v1/ai/${encodeURIComponent(organizationPath)}/${encodeURIComponent(projectName)}/${encodeURIComponent(endpointName)}${queryString}`
+      this.buildUrlWithTestMode(
+        `/api/v1/ai/${encodeURIComponent(organizationPath)}/${encodeURIComponent(projectName)}/${encodeURIComponent(endpointName)}`,
+        inputParams
       ),
       { headers }
     );
@@ -679,8 +684,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.post<
       BaseResponse<AiExecutionResponse | AiPromptResponse>
     >(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/ai/${encodeURIComponent(organizationPath)}/${encodeURIComponent(projectName)}/${encodeURIComponent(endpointName)}`
       ),
       input,
@@ -739,8 +743,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.post<
       BaseResponse<AiPromptResponse>
     >(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/ai/${encodeURIComponent(organizationPath)}/${encodeURIComponent(projectName)}/${encodeURIComponent(endpointName)}/prompt`
       ),
       input,
@@ -769,7 +772,7 @@ export class ShapeshyftClient {
 
     const response = await this.networkClient.get<
       BaseResponse<EntityWithRole[]>
-    >(buildUrl(this.baseUrl, '/api/v1/entities'), { headers });
+    >(this.buildUrlWithTestMode('/api/v1/entities'), { headers });
 
     if (!response.ok || !response.data) {
       throw handleApiError(response, 'get entities');
@@ -789,8 +792,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.get<BaseResponse<EntityWithRole>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}`
       ),
       { headers }
@@ -814,7 +816,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.post<BaseResponse<Entity>>(
-      buildUrl(this.baseUrl, '/api/v1/entities'),
+      this.buildUrlWithTestMode('/api/v1/entities'),
       data,
       { headers }
     );
@@ -838,8 +840,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.put<BaseResponse<Entity>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}`
       ),
       data,
@@ -864,8 +865,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.delete<BaseResponse<void>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}`
       ),
       { headers }
@@ -895,8 +895,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.get<
       BaseResponse<EntityMember[]>
     >(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/members`
       ),
       { headers }
@@ -922,8 +921,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.put<BaseResponse<EntityMember>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/members/${encodeURIComponent(memberId)}`
       ),
       { role },
@@ -949,8 +947,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.delete<BaseResponse<void>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/members/${encodeURIComponent(memberId)}`
       ),
       { headers }
@@ -980,8 +977,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.get<
       BaseResponse<EntityInvitation[]>
     >(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/invitations`
       ),
       { headers }
@@ -1008,8 +1004,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.post<
       BaseResponse<EntityInvitation>
     >(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/invitations`
       ),
       data,
@@ -1035,8 +1030,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.delete<BaseResponse<void>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/invitations/${encodeURIComponent(invitationId)}`
       ),
       { headers }
@@ -1060,7 +1054,7 @@ export class ShapeshyftClient {
 
     const response = await this.networkClient.get<
       BaseResponse<EntityInvitation[]>
-    >(buildUrl(this.baseUrl, '/api/v1/invitations'), { headers });
+    >(this.buildUrlWithTestMode('/api/v1/invitations'), { headers });
 
     if (!response.ok || !response.data) {
       throw handleApiError(response, 'get my invitations');
@@ -1080,8 +1074,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.post<BaseResponse<void>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/invitations/${encodeURIComponent(invitationToken)}/accept`
       ),
       {},
@@ -1106,8 +1099,7 @@ export class ShapeshyftClient {
     const headers = createAuthHeaders(token);
 
     const response = await this.networkClient.post<BaseResponse<void>>(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/invitations/${encodeURIComponent(invitationToken)}/decline`
       ),
       {},
@@ -1136,7 +1128,7 @@ export class ShapeshyftClient {
 
     const response = await this.networkClient.get<
       BaseResponse<RateLimitsConfigData>
-    >(buildUrl(this.baseUrl, '/api/v1/ratelimits'), { headers });
+    >(this.buildUrlWithTestMode('/api/v1/ratelimits'), { headers });
 
     if (!response.ok || !response.data) {
       throw handleApiError(response, 'get rate limits config');
@@ -1158,8 +1150,7 @@ export class ShapeshyftClient {
     const response = await this.networkClient.get<
       BaseResponse<RateLimitHistoryData>
     >(
-      buildUrl(
-        this.baseUrl,
+      this.buildUrlWithTestMode(
         `/api/v1/ratelimits/history/${encodeURIComponent(periodType)}`
       ),
       { headers }
