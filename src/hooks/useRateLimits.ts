@@ -19,10 +19,11 @@ export interface UseRateLimitsReturn {
   isLoadingHistory: boolean;
   error: Optional<string>;
 
-  refreshConfig: (token: FirebaseIdToken) => Promise<void>;
+  refreshConfig: (token: FirebaseIdToken, entitySlug: string) => Promise<void>;
   refreshHistory: (
     periodType: RateLimitPeriodType | 'hour' | 'day' | 'month',
-    token: FirebaseIdToken
+    token: FirebaseIdToken,
+    entitySlug: string
   ) => Promise<void>;
 
   clearError: () => void;
@@ -50,14 +51,16 @@ export const useRateLimits = (
 
   /**
    * Refresh rate limits configuration and current usage
+   * @param token - Firebase ID token
+   * @param entitySlug - Entity slug for rate limit lookup
    */
   const refreshConfig = useCallback(
-    async (token: FirebaseIdToken): Promise<void> => {
+    async (token: FirebaseIdToken, entitySlug: string): Promise<void> => {
       setIsLoadingConfig(true);
       setError(null);
 
       try {
-        const response = await client.getRateLimitsConfig(token);
+        const response = await client.getRateLimitsConfig(token, entitySlug);
         if (response.success && response.data) {
           setConfig(response.data);
         } else {
@@ -77,17 +80,21 @@ export const useRateLimits = (
 
   /**
    * Refresh rate limit usage history for a specific period type
+   * @param periodType - 'hour', 'day', or 'month'
+   * @param token - Firebase ID token
+   * @param entitySlug - Entity slug for rate limit lookup
    */
   const refreshHistory = useCallback(
     async (
       periodType: RateLimitPeriodType | 'hour' | 'day' | 'month',
-      token: FirebaseIdToken
+      token: FirebaseIdToken,
+      entitySlug: string
     ): Promise<void> => {
       setIsLoadingHistory(true);
       setError(null);
 
       try {
-        const response = await client.getRateLimitHistory(periodType, token);
+        const response = await client.getRateLimitHistory(periodType, token, entitySlug);
         if (response.success && response.data) {
           setHistory(response.data);
         } else {
