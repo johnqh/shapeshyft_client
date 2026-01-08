@@ -29,10 +29,10 @@ import type {
   EntityRole,
   EntityWithRole,
   InviteMemberRequest,
-  UpdateEntityRequest,
-  RateLimitsConfigData,
   RateLimitHistoryData,
   RateLimitPeriodType,
+  RateLimitsConfigData,
+  UpdateEntityRequest,
 } from '@sudobility/types';
 import type { FirebaseIdToken } from '../types';
 import {
@@ -892,9 +892,7 @@ export class ShapeshyftClient {
   ): Promise<BaseResponse<EntityMember[]>> {
     const headers = createAuthHeaders(token);
 
-    const response = await this.networkClient.get<
-      BaseResponse<EntityMember[]>
-    >(
+    const response = await this.networkClient.get<BaseResponse<EntityMember[]>>(
       this.buildUrlWithTestMode(
         `/api/v1/entities/${encodeURIComponent(entitySlug)}/members`
       ),
@@ -1131,7 +1129,9 @@ export class ShapeshyftClient {
 
     const response = await this.networkClient.get<
       BaseResponse<RateLimitsConfigData>
-    >(this.buildUrlWithTestMode('/api/v1/ratelimits', { entitySlug }), { headers });
+    >(this.buildUrlWithTestMode('/api/v1/ratelimits', { entitySlug }), {
+      headers,
+    });
 
     if (!response.ok || !response.data) {
       throw handleApiError(response, 'get rate limits config');

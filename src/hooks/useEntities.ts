@@ -1,8 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type {
   BaseResponse,
-  NetworkClient,
-  Optional,
   CreateEntityRequest,
   Entity,
   EntityInvitation,
@@ -10,6 +8,8 @@ import type {
   EntityRole,
   EntityWithRole,
   InviteMemberRequest,
+  NetworkClient,
+  Optional,
   UpdateEntityRequest,
 } from '@sudobility/types';
 import type { FirebaseIdToken } from '../types';
@@ -107,7 +107,8 @@ export const useEntities = (
   );
 
   const [entities, setEntities] = useState<EntityWithRole[]>([]);
-  const [currentEntity, setCurrentEntity] = useState<Optional<EntityWithRole>>(null);
+  const [currentEntity, setCurrentEntity] =
+    useState<Optional<EntityWithRole>>(null);
   const [members, setMembers] = useState<EntityMember[]>([]);
   const [invitations, setInvitations] = useState<EntityInvitation[]>([]);
   const [myInvitations, setMyInvitations] = useState<EntityInvitation[]>([]);
@@ -134,7 +135,11 @@ export const useEntities = (
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to fetch entities';
         setError(errorMessage);
-        console.error('[useEntities] refreshEntities error:', errorMessage, err);
+        console.error(
+          '[useEntities] refreshEntities error:',
+          errorMessage,
+          err
+        );
       } finally {
         setIsLoading(false);
       }
@@ -320,7 +325,11 @@ export const useEntities = (
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to update member role';
         setError(errorMessage);
-        console.error('[useEntities] updateMemberRole error:', errorMessage, err);
+        console.error(
+          '[useEntities] updateMemberRole error:',
+          errorMessage,
+          err
+        );
         return {
           success: false,
           error: errorMessage,
@@ -389,7 +398,11 @@ export const useEntities = (
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to fetch invitations';
         setError(errorMessage);
-        console.error('[useEntities] refreshInvitations error:', errorMessage, err);
+        console.error(
+          '[useEntities] refreshInvitations error:',
+          errorMessage,
+          err
+        );
       } finally {
         setIsLoading(false);
       }
@@ -420,7 +433,11 @@ export const useEntities = (
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to create invitation';
         setError(errorMessage);
-        console.error('[useEntities] createInvitation error:', errorMessage, err);
+        console.error(
+          '[useEntities] createInvitation error:',
+          errorMessage,
+          err
+        );
         return {
           success: false,
           error: errorMessage,
@@ -456,7 +473,11 @@ export const useEntities = (
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to cancel invitation';
         setError(errorMessage);
-        console.error('[useEntities] cancelInvitation error:', errorMessage, err);
+        console.error(
+          '[useEntities] cancelInvitation error:',
+          errorMessage,
+          err
+        );
         return {
           success: false,
           error: errorMessage,
@@ -489,7 +510,11 @@ export const useEntities = (
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to fetch my invitations';
         setError(errorMessage);
-        console.error('[useEntities] refreshMyInvitations error:', errorMessage, err);
+        console.error(
+          '[useEntities] refreshMyInvitations error:',
+          errorMessage,
+          err
+        );
       } finally {
         setIsLoading(false);
       }
@@ -516,7 +541,11 @@ export const useEntities = (
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to accept invitation';
         setError(errorMessage);
-        console.error('[useEntities] acceptInvitation error:', errorMessage, err);
+        console.error(
+          '[useEntities] acceptInvitation error:',
+          errorMessage,
+          err
+        );
         return {
           success: false,
           error: errorMessage,
@@ -547,7 +576,11 @@ export const useEntities = (
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to decline invitation';
         setError(errorMessage);
-        console.error('[useEntities] declineInvitation error:', errorMessage, err);
+        console.error(
+          '[useEntities] declineInvitation error:',
+          errorMessage,
+          err
+        );
         return {
           success: false,
           error: errorMessage,

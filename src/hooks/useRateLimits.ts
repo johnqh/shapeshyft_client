@@ -2,9 +2,9 @@ import { useCallback, useMemo, useState } from 'react';
 import type {
   NetworkClient,
   Optional,
-  RateLimitsConfigData,
   RateLimitHistoryData,
   RateLimitPeriodType,
+  RateLimitsConfigData,
 } from '@sudobility/types';
 import type { FirebaseIdToken } from '../types';
 import { ShapeshyftClient } from '../network/ShapeshyftClient';
@@ -68,9 +68,15 @@ export const useRateLimits = (
         }
       } catch (err) {
         const errorMessage =
-          err instanceof Error ? err.message : 'Failed to fetch rate limits config';
+          err instanceof Error
+            ? err.message
+            : 'Failed to fetch rate limits config';
         setError(errorMessage);
-        console.error('[useRateLimits] refreshConfig error:', errorMessage, err);
+        console.error(
+          '[useRateLimits] refreshConfig error:',
+          errorMessage,
+          err
+        );
       } finally {
         setIsLoadingConfig(false);
       }
@@ -94,7 +100,11 @@ export const useRateLimits = (
       setError(null);
 
       try {
-        const response = await client.getRateLimitHistory(periodType, token, entitySlug);
+        const response = await client.getRateLimitHistory(
+          periodType,
+          token,
+          entitySlug
+        );
         if (response.success && response.data) {
           setHistory(response.data);
         } else {
@@ -102,9 +112,15 @@ export const useRateLimits = (
         }
       } catch (err) {
         const errorMessage =
-          err instanceof Error ? err.message : 'Failed to fetch rate limit history';
+          err instanceof Error
+            ? err.message
+            : 'Failed to fetch rate limit history';
         setError(errorMessage);
-        console.error('[useRateLimits] refreshHistory error:', errorMessage, err);
+        console.error(
+          '[useRateLimits] refreshHistory error:',
+          errorMessage,
+          err
+        );
       } finally {
         setIsLoadingHistory(false);
       }
