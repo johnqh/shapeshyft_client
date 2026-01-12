@@ -1117,19 +1117,20 @@ export class ShapeshyftClient {
 
   /**
    * Get rate limit configuration and current usage
-   * GET /api/v1/ratelimits
+   * GET /api/v1/ratelimits/:rateLimitUserId
    * @param token - Firebase ID token
-   * @param entitySlug - Entity slug for rate limit lookup
+   * @param entitySlug - Entity slug for rate limit lookup (used as rateLimitUserId path param)
    */
   async getRateLimitsConfig(
     token: FirebaseIdToken,
     entitySlug: string
   ): Promise<BaseResponse<RateLimitsConfigData>> {
     const headers = createAuthHeaders(token);
+    const url = this.buildUrlWithTestMode(`/api/v1/ratelimits/${encodeURIComponent(entitySlug)}`);
 
     const response = await this.networkClient.get<
       BaseResponse<RateLimitsConfigData>
-    >(this.buildUrlWithTestMode('/api/v1/ratelimits', { entitySlug }), {
+    >(url, {
       headers,
     });
 
@@ -1142,10 +1143,10 @@ export class ShapeshyftClient {
 
   /**
    * Get rate limit usage history for a specific period type
-   * GET /api/v1/ratelimits/history/:periodType
+   * GET /api/v1/ratelimits/:rateLimitUserId/history/:periodType
    * @param periodType - 'hour', 'day', or 'month'
    * @param token - Firebase ID token
-   * @param entitySlug - Entity slug for rate limit lookup
+   * @param entitySlug - Entity slug for rate limit lookup (used as rateLimitUserId path param)
    */
   async getRateLimitHistory(
     periodType: RateLimitPeriodType | 'hour' | 'day' | 'month',
@@ -1158,8 +1159,7 @@ export class ShapeshyftClient {
       BaseResponse<RateLimitHistoryData>
     >(
       this.buildUrlWithTestMode(
-        `/api/v1/ratelimits/history/${encodeURIComponent(periodType)}`,
-        { entitySlug }
+        `/api/v1/ratelimits/${encodeURIComponent(entitySlug)}/history/${encodeURIComponent(periodType)}`
       ),
       { headers }
     );
