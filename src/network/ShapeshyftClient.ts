@@ -1126,7 +1126,9 @@ export class ShapeshyftClient {
     entitySlug: string
   ): Promise<BaseResponse<RateLimitsConfigData>> {
     const headers = createAuthHeaders(token);
-    const url = this.buildUrlWithTestMode(`/api/v1/ratelimits/${encodeURIComponent(entitySlug)}`);
+    const url = this.buildUrlWithTestMode(
+      `/api/v1/ratelimits/${encodeURIComponent(entitySlug)}`
+    );
 
     const response = await this.networkClient.get<
       BaseResponse<RateLimitsConfigData>
