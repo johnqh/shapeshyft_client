@@ -183,7 +183,9 @@ describe('useKeys', () => {
 
   describe('clearError', () => {
     it('should clear the error state', async () => {
-      vi.mocked(mockNetworkClient.get).mockRejectedValue(new Error('Network error'));
+      vi.mocked(mockNetworkClient.get).mockRejectedValue(
+        new Error('Network error')
+      );
 
       const { result } = renderHook(() => useKeys(mockNetworkClient, baseUrl));
 

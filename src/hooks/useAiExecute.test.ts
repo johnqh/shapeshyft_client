@@ -23,7 +23,9 @@ describe('useAiExecute', () => {
   });
 
   it('should initialize with empty state', () => {
-    const { result } = renderHook(() => useAiExecute(mockNetworkClient, baseUrl));
+    const { result } = renderHook(() =>
+      useAiExecute(mockNetworkClient, baseUrl)
+    );
 
     expect(result.current.result).toBeNull();
     expect(result.current.isLoading).toBe(false);
@@ -46,7 +48,9 @@ describe('useAiExecute', () => {
         data: { success: true, data: mockResponse },
       });
 
-      const { result } = renderHook(() => useAiExecute(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useAiExecute(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.execute('my-org', 'my-project', 'summarize', {
@@ -66,7 +70,9 @@ describe('useAiExecute', () => {
         data: { success: true, data: { output: {} } },
       });
 
-      const { result } = renderHook(() => useAiExecute(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useAiExecute(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.execute(
@@ -88,7 +94,9 @@ describe('useAiExecute', () => {
         data: { success: false, error: 'Endpoint not found' },
       });
 
-      const { result } = renderHook(() => useAiExecute(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useAiExecute(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.execute('org', 'project', 'endpoint', {});
@@ -103,7 +111,9 @@ describe('useAiExecute', () => {
         new Error('Network error')
       );
 
-      const { result } = renderHook(() => useAiExecute(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useAiExecute(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.execute('org', 'project', 'endpoint', {});
@@ -119,7 +129,9 @@ describe('useAiExecute', () => {
       });
       vi.mocked(mockNetworkClient.post).mockReturnValue(promise as never);
 
-      const { result } = renderHook(() => useAiExecute(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useAiExecute(mockNetworkClient, baseUrl)
+      );
 
       act(() => {
         result.current.execute('org', 'project', 'endpoint', {});
@@ -140,9 +152,13 @@ describe('useAiExecute', () => {
 
   describe('clearError', () => {
     it('should clear the error state', async () => {
-      vi.mocked(mockNetworkClient.post).mockRejectedValue(new Error('Test error'));
+      vi.mocked(mockNetworkClient.post).mockRejectedValue(
+        new Error('Test error')
+      );
 
-      const { result } = renderHook(() => useAiExecute(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useAiExecute(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.execute('org', 'project', 'endpoint', {});
@@ -165,7 +181,9 @@ describe('useAiExecute', () => {
         data: { success: true, data: { output: 'test' } },
       });
 
-      const { result } = renderHook(() => useAiExecute(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useAiExecute(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.execute('org', 'project', 'endpoint', {});

@@ -10,11 +10,16 @@ describe('useProjects', () => {
   beforeEach(() => {
     mockNetworkClient = new MockNetworkClient();
     // Set default response to prevent unmatched URL errors
-    mockNetworkClient.setDefaultResponse({ ok: true, data: { success: true, data: [] } });
+    mockNetworkClient.setDefaultResponse({
+      ok: true,
+      data: { success: true, data: [] },
+    });
   });
 
   it('should initialize with empty state', () => {
-    const { result } = renderHook(() => useProjects(mockNetworkClient, baseUrl));
+    const { result } = renderHook(() =>
+      useProjects(mockNetworkClient, baseUrl)
+    );
 
     expect(result.current.projects).toEqual([]);
     expect(result.current.isLoading).toBe(false);
@@ -43,7 +48,9 @@ describe('useProjects', () => {
         'GET'
       );
 
-      const { result } = renderHook(() => useProjects(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useProjects(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'token');
@@ -61,7 +68,9 @@ describe('useProjects', () => {
         'GET'
       );
 
-      const { result } = renderHook(() => useProjects(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useProjects(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'token');
@@ -78,7 +87,9 @@ describe('useProjects', () => {
         'GET'
       );
 
-      const { result } = renderHook(() => useProjects(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useProjects(mockNetworkClient, baseUrl)
+      );
 
       // Initially not loading
       expect(result.current.isLoading).toBe(false);
@@ -110,7 +121,9 @@ describe('useProjects', () => {
         'GET'
       );
 
-      const { result } = renderHook(() => useProjects(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useProjects(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.createProject(
@@ -120,8 +133,18 @@ describe('useProjects', () => {
         );
       });
 
-      expect(mockNetworkClient.wasUrlCalled(`${baseUrl}/api/v1/entities/user-123/projects`, 'POST')).toBe(true);
-      expect(mockNetworkClient.wasUrlCalled(`${baseUrl}/api/v1/entities/user-123/projects`, 'GET')).toBe(true);
+      expect(
+        mockNetworkClient.wasUrlCalled(
+          `${baseUrl}/api/v1/entities/user-123/projects`,
+          'POST'
+        )
+      ).toBe(true);
+      expect(
+        mockNetworkClient.wasUrlCalled(
+          `${baseUrl}/api/v1/entities/user-123/projects`,
+          'GET'
+        )
+      ).toBe(true);
     });
   });
 
@@ -138,7 +161,9 @@ describe('useProjects', () => {
         'GET'
       );
 
-      const { result } = renderHook(() => useProjects(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useProjects(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.updateProject(
@@ -149,7 +174,12 @@ describe('useProjects', () => {
         );
       });
 
-      expect(mockNetworkClient.wasUrlCalled(`${baseUrl}/api/v1/entities/user-123/projects/proj-1`, 'PUT')).toBe(true);
+      expect(
+        mockNetworkClient.wasUrlCalled(
+          `${baseUrl}/api/v1/entities/user-123/projects/proj-1`,
+          'PUT'
+        )
+      ).toBe(true);
     });
   });
 
@@ -166,13 +196,20 @@ describe('useProjects', () => {
         'GET'
       );
 
-      const { result } = renderHook(() => useProjects(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useProjects(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.deleteProject('user-123', 'proj-1', 'token');
       });
 
-      expect(mockNetworkClient.wasUrlCalled(`${baseUrl}/api/v1/entities/user-123/projects/proj-1`, 'DELETE')).toBe(true);
+      expect(
+        mockNetworkClient.wasUrlCalled(
+          `${baseUrl}/api/v1/entities/user-123/projects/proj-1`,
+          'DELETE'
+        )
+      ).toBe(true);
     });
   });
 
@@ -185,14 +222,25 @@ describe('useProjects', () => {
         'GET'
       );
 
-      const { result } = renderHook(() => useProjects(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useProjects(mockNetworkClient, baseUrl)
+      );
 
       let response;
       await act(async () => {
-        response = await result.current.getProjectApiKey('user-123', 'proj-1', 'token');
+        response = await result.current.getProjectApiKey(
+          'user-123',
+          'proj-1',
+          'token'
+        );
       });
 
-      expect(mockNetworkClient.wasUrlCalled(`${baseUrl}/api/v1/entities/user-123/projects/proj-1/api-key`, 'GET')).toBe(true);
+      expect(
+        mockNetworkClient.wasUrlCalled(
+          `${baseUrl}/api/v1/entities/user-123/projects/proj-1/api-key`,
+          'GET'
+        )
+      ).toBe(true);
       expect(response).toEqual(
         expect.objectContaining({
           success: true,
@@ -208,11 +256,17 @@ describe('useProjects', () => {
         'GET'
       );
 
-      const { result } = renderHook(() => useProjects(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useProjects(mockNetworkClient, baseUrl)
+      );
 
       let response;
       await act(async () => {
-        response = await result.current.getProjectApiKey('user-123', 'proj-1', 'token');
+        response = await result.current.getProjectApiKey(
+          'user-123',
+          'proj-1',
+          'token'
+        );
       });
 
       expect(response).toEqual(
@@ -241,14 +295,25 @@ describe('useProjects', () => {
         'GET'
       );
 
-      const { result } = renderHook(() => useProjects(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useProjects(mockNetworkClient, baseUrl)
+      );
 
       let response;
       await act(async () => {
-        response = await result.current.refreshProjectApiKey('user-123', 'proj-1', 'token');
+        response = await result.current.refreshProjectApiKey(
+          'user-123',
+          'proj-1',
+          'token'
+        );
       });
 
-      expect(mockNetworkClient.wasUrlCalled(`${baseUrl}/api/v1/entities/user-123/projects/proj-1/api-key/refresh`, 'POST')).toBe(true);
+      expect(
+        mockNetworkClient.wasUrlCalled(
+          `${baseUrl}/api/v1/entities/user-123/projects/proj-1/api-key/refresh`,
+          'POST'
+        )
+      ).toBe(true);
       expect(response).toEqual(
         expect.objectContaining({
           success: true,
@@ -256,7 +321,12 @@ describe('useProjects', () => {
         })
       );
       // Should also refresh the projects list
-      expect(mockNetworkClient.wasUrlCalled(`${baseUrl}/api/v1/entities/user-123/projects`, 'GET')).toBe(true);
+      expect(
+        mockNetworkClient.wasUrlCalled(
+          `${baseUrl}/api/v1/entities/user-123/projects`,
+          'GET'
+        )
+      ).toBe(true);
     });
   });
 
@@ -268,7 +338,9 @@ describe('useProjects', () => {
         'GET'
       );
 
-      const { result } = renderHook(() => useProjects(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useProjects(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'token');
@@ -288,11 +360,19 @@ describe('useProjects', () => {
     it('should reset all state to initial values', async () => {
       mockNetworkClient.setMockResponse(
         `${baseUrl}/api/v1/entities/user-123/projects`,
-        { ok: true, data: { success: true, data: [{ uuid: 'proj-1', project_name: 'test' }] } },
+        {
+          ok: true,
+          data: {
+            success: true,
+            data: [{ uuid: 'proj-1', project_name: 'test' }],
+          },
+        },
         'GET'
       );
 
-      const { result } = renderHook(() => useProjects(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useProjects(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'token');

@@ -10,11 +10,16 @@ describe('useEndpoints', () => {
   beforeEach(() => {
     mockNetworkClient = new MockNetworkClient();
     // Set default response to prevent unmatched URL errors
-    mockNetworkClient.setDefaultResponse({ ok: true, data: { success: true, data: [] } });
+    mockNetworkClient.setDefaultResponse({
+      ok: true,
+      data: { success: true, data: [] },
+    });
   });
 
   it('should initialize with empty state', () => {
-    const { result } = renderHook(() => useEndpoints(mockNetworkClient, baseUrl));
+    const { result } = renderHook(() =>
+      useEndpoints(mockNetworkClient, baseUrl)
+    );
 
     expect(result.current.endpoints).toEqual([]);
     expect(result.current.isLoading).toBe(false);
@@ -47,7 +52,9 @@ describe('useEndpoints', () => {
         'GET'
       );
 
-      const { result } = renderHook(() => useEndpoints(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useEndpoints(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'proj-1', 'token');
@@ -65,7 +72,9 @@ describe('useEndpoints', () => {
         'GET'
       );
 
-      const { result } = renderHook(() => useEndpoints(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useEndpoints(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'proj-1', 'token');
@@ -89,17 +98,26 @@ describe('useEndpoints', () => {
         'GET'
       );
 
-      const { result } = renderHook(() => useEndpoints(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useEndpoints(mockNetworkClient, baseUrl)
+      );
 
       let response;
       await act(async () => {
-        response = await result.current.getEndpoint('user-123', 'proj-1', 'ep-1', 'token');
+        response = await result.current.getEndpoint(
+          'user-123',
+          'proj-1',
+          'ep-1',
+          'token'
+        );
       });
 
-      expect(mockNetworkClient.wasUrlCalled(
-        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints/ep-1`,
-        'GET'
-      )).toBe(true);
+      expect(
+        mockNetworkClient.wasUrlCalled(
+          `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints/ep-1`,
+          'GET'
+        )
+      ).toBe(true);
       expect(response).toEqual(
         expect.objectContaining({
           success: true,
@@ -128,25 +146,35 @@ describe('useEndpoints', () => {
         'GET'
       );
 
-      const { result } = renderHook(() => useEndpoints(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useEndpoints(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.createEndpoint(
           'user-123',
           'proj-1',
-          { endpoint_name: 'new-endpoint', display_name: 'New Endpoint', llm_key_id: 'key-1' },
+          {
+            endpoint_name: 'new-endpoint',
+            display_name: 'New Endpoint',
+            llm_key_id: 'key-1',
+          },
           'token'
         );
       });
 
-      expect(mockNetworkClient.wasUrlCalled(
-        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints`,
-        'POST'
-      )).toBe(true);
-      expect(mockNetworkClient.wasUrlCalled(
-        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints`,
-        'GET'
-      )).toBe(true);
+      expect(
+        mockNetworkClient.wasUrlCalled(
+          `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints`,
+          'POST'
+        )
+      ).toBe(true);
+      expect(
+        mockNetworkClient.wasUrlCalled(
+          `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints`,
+          'GET'
+        )
+      ).toBe(true);
     });
   });
 
@@ -163,7 +191,9 @@ describe('useEndpoints', () => {
         'GET'
       );
 
-      const { result } = renderHook(() => useEndpoints(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useEndpoints(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.updateEndpoint(
@@ -175,20 +205,30 @@ describe('useEndpoints', () => {
         );
       });
 
-      expect(mockNetworkClient.wasUrlCalled(
-        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints/ep-1`,
-        'PUT'
-      )).toBe(true);
+      expect(
+        mockNetworkClient.wasUrlCalled(
+          `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints/ep-1`,
+          'PUT'
+        )
+      ).toBe(true);
     });
 
     it('should update endpoint with IP allowlist', async () => {
       mockNetworkClient.setMockResponse(
         `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints/ep-1`,
-        { ok: true, data: { success: true, data: { uuid: 'ep-1', ip_allowlist: ['192.168.1.1'] } } },
+        {
+          ok: true,
+          data: {
+            success: true,
+            data: { uuid: 'ep-1', ip_allowlist: ['192.168.1.1'] },
+          },
+        },
         'PUT'
       );
 
-      const { result } = renderHook(() => useEndpoints(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useEndpoints(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.updateEndpoint(
@@ -201,10 +241,12 @@ describe('useEndpoints', () => {
       });
 
       // Verify the PUT request was made
-      expect(mockNetworkClient.wasUrlCalled(
-        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints/ep-1`,
-        'PUT'
-      )).toBe(true);
+      expect(
+        mockNetworkClient.wasUrlCalled(
+          `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints/ep-1`,
+          'PUT'
+        )
+      ).toBe(true);
     });
   });
 
@@ -221,16 +263,25 @@ describe('useEndpoints', () => {
         'GET'
       );
 
-      const { result } = renderHook(() => useEndpoints(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useEndpoints(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
-        await result.current.deleteEndpoint('user-123', 'proj-1', 'ep-1', 'token');
+        await result.current.deleteEndpoint(
+          'user-123',
+          'proj-1',
+          'ep-1',
+          'token'
+        );
       });
 
-      expect(mockNetworkClient.wasUrlCalled(
-        `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints/ep-1`,
-        'DELETE'
-      )).toBe(true);
+      expect(
+        mockNetworkClient.wasUrlCalled(
+          `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints/ep-1`,
+          'DELETE'
+        )
+      ).toBe(true);
     });
   });
 
@@ -242,7 +293,9 @@ describe('useEndpoints', () => {
         'GET'
       );
 
-      const { result } = renderHook(() => useEndpoints(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useEndpoints(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'proj-1', 'token');
@@ -262,11 +315,19 @@ describe('useEndpoints', () => {
     it('should reset all state to initial values', async () => {
       mockNetworkClient.setMockResponse(
         `${baseUrl}/api/v1/entities/user-123/projects/proj-1/endpoints`,
-        { ok: true, data: { success: true, data: [{ uuid: 'ep-1', endpoint_name: 'test' }] } },
+        {
+          ok: true,
+          data: {
+            success: true,
+            data: [{ uuid: 'ep-1', endpoint_name: 'test' }],
+          },
+        },
         'GET'
       );
 
-      const { result } = renderHook(() => useEndpoints(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useEndpoints(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'proj-1', 'token');

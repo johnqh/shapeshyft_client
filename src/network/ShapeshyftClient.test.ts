@@ -19,7 +19,10 @@ describe('ShapeshyftClient', () => {
 
   beforeEach(() => {
     mockNetworkClient = createMockNetworkClient();
-    client = new ShapeshyftClient({ baseUrl, networkClient: mockNetworkClient });
+    client = new ShapeshyftClient({
+      baseUrl,
+      networkClient: mockNetworkClient,
+    });
   });
 
   describe('constructor', () => {
@@ -74,7 +77,11 @@ describe('ShapeshyftClient', () => {
 
     describe('getKey', () => {
       it('should fetch a single key', async () => {
-        const mockKey = { uuid: keyId, key_name: 'Test Key', provider: 'openai' };
+        const mockKey = {
+          uuid: keyId,
+          key_name: 'Test Key',
+          provider: 'openai',
+        };
         vi.mocked(mockNetworkClient.get).mockResolvedValue({
           ok: true,
           data: { success: true, data: mockKey },
@@ -165,7 +172,11 @@ describe('ShapeshyftClient', () => {
     describe('getProjects', () => {
       it('should fetch all projects for a user', async () => {
         const mockProjects = [
-          { uuid: 'proj-1', project_name: 'my-project', display_name: 'My Project' },
+          {
+            uuid: 'proj-1',
+            project_name: 'my-project',
+            display_name: 'My Project',
+          },
         ];
         vi.mocked(mockNetworkClient.get).mockResolvedValue({
           ok: true,
@@ -280,7 +291,11 @@ describe('ShapeshyftClient', () => {
     describe('getEndpoints', () => {
       it('should fetch all endpoints for a project', async () => {
         const mockEndpoints = [
-          { uuid: 'ep-1', endpoint_name: 'summarize', display_name: 'Summarize' },
+          {
+            uuid: 'ep-1',
+            endpoint_name: 'summarize',
+            display_name: 'Summarize',
+          },
         ];
         vi.mocked(mockNetworkClient.get).mockResolvedValue({
           ok: true,
@@ -305,7 +320,12 @@ describe('ShapeshyftClient', () => {
           data: { success: true, data: mockEndpoint },
         });
 
-        const result = await client.getEndpoint(userId, projectId, endpointId, token);
+        const result = await client.getEndpoint(
+          userId,
+          projectId,
+          endpointId,
+          token
+        );
 
         expect(result.data).toEqual(mockEndpoint);
       });
@@ -341,7 +361,13 @@ describe('ShapeshyftClient', () => {
           data: { success: true, data: { uuid: endpointId } },
         });
 
-        await client.updateEndpoint(userId, projectId, endpointId, updateData, token);
+        await client.updateEndpoint(
+          userId,
+          projectId,
+          endpointId,
+          updateData,
+          token
+        );
 
         expect(mockNetworkClient.put).toHaveBeenCalledWith(
           `${baseUrl}/api/v1/entities/${userId}/projects/${projectId}/endpoints/${endpointId}`,
@@ -460,7 +486,10 @@ describe('ShapeshyftClient', () => {
         const updateData = { organization_name: 'New Org Name' };
         vi.mocked(mockNetworkClient.put).mockResolvedValue({
           ok: true,
-          data: { success: true, data: { ...updateData, uuid: 'settings-123' } },
+          data: {
+            success: true,
+            data: { ...updateData, uuid: 'settings-123' },
+          },
         });
 
         await client.updateSettings(userId, updateData, token);
@@ -521,7 +550,12 @@ describe('ShapeshyftClient', () => {
           data: { success: true, data: {} },
         });
 
-        await client.executeAiGet(organizationPath, projectName, endpointName, {});
+        await client.executeAiGet(
+          organizationPath,
+          projectName,
+          endpointName,
+          {}
+        );
 
         expect(mockNetworkClient.get).toHaveBeenCalledWith(
           expect.any(String),
@@ -578,7 +612,13 @@ describe('ShapeshyftClient', () => {
           data: { success: true, data: {} },
         });
 
-        await client.executeAi(organizationPath, projectName, endpointName, {}, 'GET');
+        await client.executeAi(
+          organizationPath,
+          projectName,
+          endpointName,
+          {},
+          'GET'
+        );
 
         expect(mockNetworkClient.get).toHaveBeenCalled();
         expect(mockNetworkClient.post).not.toHaveBeenCalled();

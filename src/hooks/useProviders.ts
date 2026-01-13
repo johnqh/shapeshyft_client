@@ -95,12 +95,7 @@ export const useProviderModels = (
     [baseUrl, networkClient, testMode]
   );
 
-  const {
-    data,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: QUERY_KEYS.providerModels(provider ?? ''),
     queryFn: async (): Promise<ProviderModelsResponse> => {
       if (!provider) {

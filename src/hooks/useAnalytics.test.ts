@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import type { NetworkClient, AnalyticsResponse } from '@sudobility/shapeshyft_types';
+import type {
+  NetworkClient,
+  AnalyticsResponse,
+} from '@sudobility/shapeshyft_types';
 import { useAnalytics } from './useAnalytics';
 
 // Mock NetworkClient
@@ -52,7 +55,9 @@ describe('useAnalytics', () => {
   });
 
   it('should initialize with empty state', () => {
-    const { result } = renderHook(() => useAnalytics(mockNetworkClient, baseUrl));
+    const { result } = renderHook(() =>
+      useAnalytics(mockNetworkClient, baseUrl)
+    );
 
     expect(result.current.analytics).toBeNull();
     expect(result.current.isLoading).toBe(false);
@@ -66,7 +71,9 @@ describe('useAnalytics', () => {
         data: { success: true, data: mockAnalyticsData },
       });
 
-      const { result } = renderHook(() => useAnalytics(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useAnalytics(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'token');
@@ -83,7 +90,9 @@ describe('useAnalytics', () => {
         data: { success: true, data: mockAnalyticsData },
       });
 
-      const { result } = renderHook(() => useAnalytics(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useAnalytics(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'token', {
@@ -104,7 +113,9 @@ describe('useAnalytics', () => {
         data: { success: false, error: 'Unauthorized' },
       });
 
-      const { result } = renderHook(() => useAnalytics(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useAnalytics(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'token');
@@ -121,7 +132,9 @@ describe('useAnalytics', () => {
       });
       vi.mocked(mockNetworkClient.get).mockReturnValue(promise as never);
 
-      const { result } = renderHook(() => useAnalytics(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useAnalytics(mockNetworkClient, baseUrl)
+      );
 
       act(() => {
         result.current.refresh('user-123', 'token');
@@ -140,9 +153,13 @@ describe('useAnalytics', () => {
     });
 
     it('should handle network errors', async () => {
-      vi.mocked(mockNetworkClient.get).mockRejectedValue(new Error('Network error'));
+      vi.mocked(mockNetworkClient.get).mockRejectedValue(
+        new Error('Network error')
+      );
 
-      const { result } = renderHook(() => useAnalytics(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useAnalytics(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'token');
@@ -157,7 +174,9 @@ describe('useAnalytics', () => {
         data: { success: true },
       });
 
-      const { result } = renderHook(() => useAnalytics(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useAnalytics(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'token');
@@ -169,9 +188,13 @@ describe('useAnalytics', () => {
 
   describe('clearError', () => {
     it('should clear the error state', async () => {
-      vi.mocked(mockNetworkClient.get).mockRejectedValue(new Error('Network error'));
+      vi.mocked(mockNetworkClient.get).mockRejectedValue(
+        new Error('Network error')
+      );
 
-      const { result } = renderHook(() => useAnalytics(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useAnalytics(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'token');
@@ -194,7 +217,9 @@ describe('useAnalytics', () => {
         data: { success: true, data: mockAnalyticsData },
       });
 
-      const { result } = renderHook(() => useAnalytics(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useAnalytics(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'token');

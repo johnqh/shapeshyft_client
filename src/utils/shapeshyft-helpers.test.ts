@@ -87,7 +87,9 @@ describe('shapeshyft-helpers', () => {
     });
 
     it('should prefer error over message', () => {
-      const response = { data: { error: 'Primary error', message: 'Secondary' } };
+      const response = {
+        data: { error: 'Primary error', message: 'Secondary' },
+      };
       const error = handleApiError(response, 'test');
 
       expect(error.message).toBe('Failed to test: Primary error');

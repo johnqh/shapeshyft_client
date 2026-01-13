@@ -23,7 +23,9 @@ describe('useSettings', () => {
   });
 
   it('should initialize with empty state', () => {
-    const { result } = renderHook(() => useSettings(mockNetworkClient, baseUrl));
+    const { result } = renderHook(() =>
+      useSettings(mockNetworkClient, baseUrl)
+    );
 
     expect(result.current.settings).toBeNull();
     expect(result.current.isLoading).toBe(false);
@@ -45,7 +47,9 @@ describe('useSettings', () => {
         data: { success: true, data: mockSettings },
       });
 
-      const { result } = renderHook(() => useSettings(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useSettings(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'token');
@@ -62,7 +66,9 @@ describe('useSettings', () => {
         data: { success: false, error: 'Unauthorized' },
       });
 
-      const { result } = renderHook(() => useSettings(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useSettings(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'token');
@@ -79,7 +85,9 @@ describe('useSettings', () => {
       });
       vi.mocked(mockNetworkClient.get).mockReturnValue(promise as never);
 
-      const { result } = renderHook(() => useSettings(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useSettings(mockNetworkClient, baseUrl)
+      );
 
       act(() => {
         result.current.refresh('user-123', 'token');
@@ -98,9 +106,13 @@ describe('useSettings', () => {
     });
 
     it('should handle network errors', async () => {
-      vi.mocked(mockNetworkClient.get).mockRejectedValue(new Error('Network error'));
+      vi.mocked(mockNetworkClient.get).mockRejectedValue(
+        new Error('Network error')
+      );
 
-      const { result } = renderHook(() => useSettings(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useSettings(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'token');
@@ -125,7 +137,9 @@ describe('useSettings', () => {
         data: { success: true, data: updatedSettings },
       });
 
-      const { result } = renderHook(() => useSettings(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useSettings(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         const response = await result.current.updateSettings(
@@ -141,9 +155,13 @@ describe('useSettings', () => {
     });
 
     it('should return error response on failed update', async () => {
-      vi.mocked(mockNetworkClient.put).mockRejectedValue(new Error('Update failed'));
+      vi.mocked(mockNetworkClient.put).mockRejectedValue(
+        new Error('Update failed')
+      );
 
-      const { result } = renderHook(() => useSettings(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useSettings(mockNetworkClient, baseUrl)
+      );
 
       let response;
       await act(async () => {
@@ -161,9 +179,13 @@ describe('useSettings', () => {
 
   describe('clearError', () => {
     it('should clear the error state', async () => {
-      vi.mocked(mockNetworkClient.get).mockRejectedValue(new Error('Network error'));
+      vi.mocked(mockNetworkClient.get).mockRejectedValue(
+        new Error('Network error')
+      );
 
-      const { result } = renderHook(() => useSettings(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useSettings(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'token');
@@ -194,7 +216,9 @@ describe('useSettings', () => {
         data: { success: true, data: mockSettings },
       });
 
-      const { result } = renderHook(() => useSettings(mockNetworkClient, baseUrl));
+      const { result } = renderHook(() =>
+        useSettings(mockNetworkClient, baseUrl)
+      );
 
       await act(async () => {
         await result.current.refresh('user-123', 'token');
