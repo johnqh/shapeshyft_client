@@ -35,4 +35,10 @@ export const QUERY_KEYS = {
   rateLimitsConfig: () => ['shapeshyft', 'ratelimits', 'config'] as const,
   rateLimitsHistory: (periodType: string) =>
     ['shapeshyft', 'ratelimits', 'history', periodType] as const,
+  // Provider query keys (public, no auth needed)
+  providers: () => ['shapeshyft', 'providers'] as const,
+  provider: (providerId: string) =>
+    ['shapeshyft', 'providers', providerId] as const,
+  providerModels: (providerId: string) =>
+    ['shapeshyft', 'providers', providerId, 'models'] as const,
 } as const;

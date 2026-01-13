@@ -11,11 +11,14 @@ import type {
   LlmApiKeyCreateRequest,
   LlmApiKeySafe,
   LlmApiKeyUpdateRequest,
+  LlmProvider,
   NetworkClient,
   Project,
   ProjectCreateRequest,
   ProjectQueryParams,
   ProjectUpdateRequest,
+  ProviderConfig,
+  ProviderModelsResponse,
   RefreshApiKeyResponse,
   UsageAnalyticsQueryParams,
   UserSettings,
@@ -1168,6 +1171,76 @@ export class ShapeshyftClient {
 
     if (!response.ok || !response.data) {
       throw handleApiError(response, 'get rate limit history');
+    }
+
+    return response.data;
+  }
+
+  // =============================================================================
+  // PROVIDERS (Public - no auth required)
+  // =============================================================================
+
+  /**
+   * Get all available LLM providers
+   * GET /api/v1/providers
+   */
+  async getProviders(): Promise<BaseResponse<ProviderConfig[]>> {
+    const headers = createHeaders();
+
+    const response = await this.networkClient.get<
+      BaseResponse<ProviderConfig[]>
+    >(this.buildUrlWithTestMode('/api/v1/providers'), { headers });
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'get providers');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Get a specific provider's configuration
+   * GET /api/v1/providers/:provider
+   */
+  async getProvider(
+    provider: LlmProvider
+  ): Promise<BaseResponse<ProviderConfig>> {
+    const headers = createHeaders();
+
+    const response = await this.networkClient.get<BaseResponse<ProviderConfig>>(
+      this.buildUrlWithTestMode(
+        `/api/v1/providers/${encodeURIComponent(provider)}`
+      ),
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'get provider');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Get models for a specific provider with capabilities and pricing
+   * GET /api/v1/providers/:provider/models
+   */
+  async getProviderModels(
+    provider: LlmProvider
+  ): Promise<BaseResponse<ProviderModelsResponse>> {
+    const headers = createHeaders();
+
+    const response = await this.networkClient.get<
+      BaseResponse<ProviderModelsResponse>
+    >(
+      this.buildUrlWithTestMode(
+        `/api/v1/providers/${encodeURIComponent(provider)}/models`
+      ),
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'get provider models');
     }
 
     return response.data;
