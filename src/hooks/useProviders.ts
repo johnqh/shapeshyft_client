@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useMemo, useRef } from 'react';
 import type {
   LlmProvider,
   ModelInfo,
@@ -9,6 +9,10 @@ import type {
 } from '@sudobility/shapeshyft_types';
 import { ShapeshyftClient } from '../network/ShapeshyftClient';
 import { QUERY_KEYS } from '../types';
+
+// Stable empty arrays to prevent unnecessary re-renders
+const EMPTY_PROVIDERS: ProviderConfig[] = [];
+const EMPTY_MODELS: ModelInfo[] = [];
 
 /**
  * Return type for useProviders hook
@@ -32,8 +36,10 @@ export interface UseProviderModelsReturn {
   provider: ProviderConfig | null;
   /** List of models for the provider */
   models: ModelInfo[];
-  /** Loading state for models */
+  /** Loading state for initial load */
   isLoading: boolean;
+  /** Fetching state (includes background refetches) */
+  isFetching: boolean;
   /** Error message for models fetch */
   error: string | null;
   /** Refetch models */
@@ -73,7 +79,7 @@ export const useProviders = (
   });
 
   return {
-    providers: data ?? [],
+    providers: data ?? EMPTY_PROVIDERS,
     isLoadingProviders,
     providersError: error instanceof Error ? error.message : null,
     refetchProviders: refetch,
@@ -82,7 +88,7 @@ export const useProviders = (
 
 /**
  * Hook for fetching models for a specific provider
- * Uses TanStack Query for caching
+ * Uses TanStack Query for caching with keepPreviousData to prevent empty flashes
  */
 export const useProviderModels = (
   networkClient: NetworkClient,
@@ -95,7 +101,13 @@ export const useProviderModels = (
     [baseUrl, networkClient, testMode]
   );
 
-  const { data, isLoading, error, refetch } = useQuery({
+  // Track the last valid provider to maintain stable query behavior
+  const lastProviderRef = useRef<LlmProvider | null>(null);
+  if (provider) {
+    lastProviderRef.current = provider;
+  }
+
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: QUERY_KEYS.providerModels(provider ?? ''),
     queryFn: async (): Promise<ProviderModelsResponse> => {
       if (!provider) {
@@ -110,12 +122,14 @@ export const useProviderModels = (
     enabled: !!provider, // Only fetch when provider is provided
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+    placeholderData: keepPreviousData, // Keep previous data while fetching new provider's models
   });
 
   return {
     provider: data?.provider ?? null,
-    models: data?.models ?? [],
+    models: data?.models ?? EMPTY_MODELS,
     isLoading,
+    isFetching,
     error: error instanceof Error ? error.message : null,
     refetch,
   };
