@@ -16,3 +16,7 @@ export {
   type UseProvidersReturn,
   type UseProviderModelsReturn,
 } from './useProviders';
+export {
+  useStorageConfig,
+  type UseStorageConfigReturn,
+} from './useStorageConfig';

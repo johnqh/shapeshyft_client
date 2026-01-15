@@ -7,6 +7,7 @@ import type {
   EndpointCreateRequest,
   EndpointQueryParams,
   EndpointUpdateRequest,
+  EntityStorageConfig,
   GetApiKeyResponse,
   LlmApiKeyCreateRequest,
   LlmApiKeySafe,
@@ -20,6 +21,8 @@ import type {
   ProviderConfig,
   ProviderModelsResponse,
   RefreshApiKeyResponse,
+  StorageConfigCreateRequest,
+  StorageConfigUpdateRequest,
   UsageAnalyticsQueryParams,
   UserSettings,
   UserSettingsUpdateRequest,
@@ -219,6 +222,118 @@ export class ShapeshyftClient {
 
     if (!response.ok || !response.data) {
       throw handleApiError(response, 'delete key');
+    }
+
+    return response.data;
+  }
+
+  // =============================================================================
+  // STORAGE CONFIG (Firebase auth required, entity-scoped)
+  // =============================================================================
+
+  /**
+   * Get storage configuration for an entity
+   * GET /api/v1/entities/:entitySlug/storage
+   */
+  async getStorageConfig(
+    entitySlug: string,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<EntityStorageConfig>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.get<
+      BaseResponse<EntityStorageConfig>
+    >(
+      this.buildUrlWithTestMode(
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/storage`
+      ),
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'get storage config');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Create or update storage configuration
+   * POST /api/v1/entities/:entitySlug/storage
+   */
+  async createStorageConfig(
+    entitySlug: string,
+    data: StorageConfigCreateRequest,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<EntityStorageConfig>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.post<
+      BaseResponse<EntityStorageConfig>
+    >(
+      this.buildUrlWithTestMode(
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/storage`
+      ),
+      data,
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'create storage config');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Update storage configuration (partial update)
+   * PUT /api/v1/entities/:entitySlug/storage
+   */
+  async updateStorageConfig(
+    entitySlug: string,
+    data: StorageConfigUpdateRequest,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<EntityStorageConfig>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.put<
+      BaseResponse<EntityStorageConfig>
+    >(
+      this.buildUrlWithTestMode(
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/storage`
+      ),
+      data,
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'update storage config');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Delete storage configuration
+   * DELETE /api/v1/entities/:entitySlug/storage
+   */
+  async deleteStorageConfig(
+    entitySlug: string,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<EntityStorageConfig>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.delete<
+      BaseResponse<EntityStorageConfig>
+    >(
+      this.buildUrlWithTestMode(
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/storage`
+      ),
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'delete storage config');
     }
 
     return response.data;
