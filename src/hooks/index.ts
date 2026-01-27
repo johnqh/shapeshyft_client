@@ -9,7 +9,6 @@ export {
   type AiResult,
 } from './useAiExecute';
 export { useEntities, type UseEntitiesReturn } from './useEntities';
-export { useRateLimits, type UseRateLimitsReturn } from './useRateLimits';
 export {
   useProviders,
   useProviderModels,
