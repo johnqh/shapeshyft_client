@@ -764,7 +764,8 @@ export class ShapeshyftClient {
     projectName: string,
     endpointName: string,
     input: unknown,
-    apiKey?: string
+    apiKey?: string,
+    timeout?: number
   ): Promise<BaseResponse<AiExecutionResponse | AiPromptResponse>> {
     const headers = apiKey ? createApiKeyHeaders(apiKey) : createHeaders();
     const inputParams = input ? { input: JSON.stringify(input) } : {};
@@ -776,7 +777,7 @@ export class ShapeshyftClient {
         `/api/v1/ai/${encodeURIComponent(organizationPath)}/${encodeURIComponent(projectName)}/${encodeURIComponent(endpointName)}`,
         inputParams
       ),
-      { headers }
+      { headers, timeout }
     );
 
     if (!response.ok || !response.data) {
@@ -795,7 +796,8 @@ export class ShapeshyftClient {
     projectName: string,
     endpointName: string,
     input: unknown,
-    apiKey?: string
+    apiKey?: string,
+    timeout?: number
   ): Promise<BaseResponse<AiExecutionResponse | AiPromptResponse>> {
     const headers = apiKey ? createApiKeyHeaders(apiKey) : createHeaders();
 
@@ -806,7 +808,7 @@ export class ShapeshyftClient {
         `/api/v1/ai/${encodeURIComponent(organizationPath)}/${encodeURIComponent(projectName)}/${encodeURIComponent(endpointName)}`
       ),
       input,
-      { headers }
+      { headers, timeout }
     );
 
     if (!response.ok || !response.data) {
@@ -825,7 +827,8 @@ export class ShapeshyftClient {
     endpointName: string,
     input: unknown,
     method: 'GET' | 'POST' = 'POST',
-    apiKey?: string
+    apiKey?: string,
+    timeout?: number
   ): Promise<BaseResponse<AiExecutionResponse | AiPromptResponse>> {
     if (method === 'GET') {
       return this.executeAiGet(
@@ -833,7 +836,8 @@ export class ShapeshyftClient {
         projectName,
         endpointName,
         input,
-        apiKey
+        apiKey,
+        timeout
       );
     }
     return this.executeAiPost(
@@ -841,7 +845,8 @@ export class ShapeshyftClient {
       projectName,
       endpointName,
       input,
-      apiKey
+      apiKey,
+      timeout
     );
   }
 
@@ -854,7 +859,8 @@ export class ShapeshyftClient {
     projectName: string,
     endpointName: string,
     input: unknown,
-    apiKey?: string
+    apiKey?: string,
+    timeout?: number
   ): Promise<BaseResponse<AiPromptResponse>> {
     const headers = apiKey ? createApiKeyHeaders(apiKey) : createHeaders();
 
@@ -865,7 +871,7 @@ export class ShapeshyftClient {
         `/api/v1/ai/${encodeURIComponent(organizationPath)}/${encodeURIComponent(projectName)}/${encodeURIComponent(endpointName)}/prompt`
       ),
       input,
-      { headers }
+      { headers, timeout }
     );
 
     if (!response.ok || !response.data) {

@@ -28,7 +28,8 @@ export interface UseAiExecuteReturn {
     endpointName: string,
     input: unknown,
     method?: HttpMethod,
-    apiKey?: string
+    apiKey?: string,
+    timeout?: number
   ) => Promise<BaseResponse<AiResult>>;
 
   getPrompt: (
@@ -36,7 +37,8 @@ export interface UseAiExecuteReturn {
     projectName: string,
     endpointName: string,
     input: unknown,
-    apiKey?: string
+    apiKey?: string,
+    timeout?: number
   ) => Promise<BaseResponse<AiPromptResponse>>;
 
   clearError: () => void;
@@ -71,7 +73,8 @@ export const useAiExecute = (
       endpointName: string,
       input: unknown,
       method: HttpMethod = 'POST',
-      apiKey?: string
+      apiKey?: string,
+      timeout?: number
     ): Promise<BaseResponse<AiResult>> => {
       setIsLoading(true);
       setError(null);
@@ -83,7 +86,8 @@ export const useAiExecute = (
           endpointName,
           input,
           method,
-          apiKey
+          apiKey,
+          timeout
         );
         if (response.success && response.data) {
           setResult(response.data);
@@ -117,7 +121,8 @@ export const useAiExecute = (
       projectName: string,
       endpointName: string,
       input: unknown,
-      apiKey?: string
+      apiKey?: string,
+      timeout?: number
     ): Promise<BaseResponse<AiPromptResponse>> => {
       setIsLoading(true);
       setError(null);
@@ -128,7 +133,8 @@ export const useAiExecute = (
           projectName,
           endpointName,
           input,
-          apiKey
+          apiKey,
+          timeout
         );
         return response;
       } catch (err) {
