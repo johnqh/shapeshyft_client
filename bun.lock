@@ -5,7 +5,7 @@
       "name": "@sudobility/shapeshyft_client",
       "devDependencies": {
         "@eslint/js": "^9.39.2",
-        "@sudobility/di": "^1.5.31",
+        "@sudobility/di": "^1.5.33",
         "@sudobility/shapeshyft_types": "^1.0.37",
         "@sudobility/types": "^1.9.49",
         "@tanstack/react-query": "^5.90.5",
@@ -188,7 +188,7 @@
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 
-    "@sudobility/di": ["@sudobility/di@1.5.31", "", { "peerDependencies": { "@notifee/react-native": ">=7.0.0", "@react-native-async-storage/async-storage": ">=1.19.0", "@react-native-community/netinfo": ">=9.0.0", "@sudobility/types": "^1.9.49", "react": ">=18.0.0", "react-native": ">=0.70.0" }, "optionalPeers": ["@notifee/react-native", "@react-native-async-storage/async-storage", "@react-native-community/netinfo", "react-native"] }, "sha512-ntMkqsFsY07vbZHb31GmO1r7qXJRuyEmoXARojKdqn8pq0OSnZx73NaI3r8ye2V5g0lK72J6pEDvuzjTTyjo0g=="],
+    "@sudobility/di": ["@sudobility/di@1.5.33", "", { "peerDependencies": { "@notifee/react-native": ">=7.0.0", "@react-native-async-storage/async-storage": ">=1.19.0", "@react-native-community/netinfo": ">=9.0.0", "@react-native-firebase/analytics": ">=18.0.0", "@react-native-firebase/app": ">=18.0.0", "@react-native-firebase/messaging": ">=18.0.0", "@react-native-firebase/remote-config": ">=18.0.0", "@sudobility/types": "^1.9.49", "firebase": ">=11.0.0", "react": ">=18.0.0", "react-native": ">=0.70.0" }, "optionalPeers": ["@notifee/react-native", "@react-native-async-storage/async-storage", "@react-native-community/netinfo", "@react-native-firebase/analytics", "@react-native-firebase/app", "@react-native-firebase/messaging", "@react-native-firebase/remote-config", "firebase", "react-native"] }, "sha512-VWRyllE+hNkjXLbiMyYQAFQD3H5y73z2hups9Ac8+IrtCsZmTnEVJC44TcAuf/txB4qw9+N7wGadA08Vb1g1nQ=="],
 
     "@sudobility/shapeshyft_types": ["@sudobility/shapeshyft_types@1.0.37", "", { "peerDependencies": { "@sudobility/types": "^1.9.49" } }, "sha512-WXDeSMMwFp3nRjNWEgA69pPMF6buUS2sWKAndFGsV0qloY7Nb6xRjIpwGEmg3ZOvZVN/Fj/OI+r+fpnLAueiuQ=="],
 
