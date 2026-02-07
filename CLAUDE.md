@@ -8,6 +8,7 @@ React client library for ShapeShyft API with state management hooks.
 
 - **Language**: TypeScript
 - **Runtime**: Bun
+- **Package Manager**: Bun (do not use npm/yarn/pnpm for installing dependencies)
 - **Build**: TypeScript compiler (tsc)
 - **Test**: Vitest
 
