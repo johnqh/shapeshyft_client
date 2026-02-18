@@ -11,17 +11,21 @@ export type FirebaseIdToken = string;
  * Query key types for TanStack Query
  */
 export const QUERY_KEYS = {
-  keys: (userId: string) => ['shapeshyft', 'keys', userId] as const,
-  key: (userId: string, keyId: string) =>
-    ['shapeshyft', 'keys', userId, keyId] as const,
-  projects: (userId: string) => ['shapeshyft', 'projects', userId] as const,
-  project: (userId: string, projectId: string) =>
-    ['shapeshyft', 'projects', userId, projectId] as const,
-  endpoints: (userId: string, projectId: string) =>
-    ['shapeshyft', 'endpoints', userId, projectId] as const,
-  endpoint: (userId: string, projectId: string, endpointId: string) =>
-    ['shapeshyft', 'endpoints', userId, projectId, endpointId] as const,
+  keys: (entitySlug: string) => ['shapeshyft', 'keys', entitySlug] as const,
+  key: (entitySlug: string, keyId: string) =>
+    ['shapeshyft', 'keys', entitySlug, keyId] as const,
+  projects: (entitySlug: string) =>
+    ['shapeshyft', 'projects', entitySlug] as const,
+  project: (entitySlug: string, projectId: string) =>
+    ['shapeshyft', 'projects', entitySlug, projectId] as const,
+  endpoints: (entitySlug: string, projectId: string) =>
+    ['shapeshyft', 'endpoints', entitySlug, projectId] as const,
+  endpoint: (entitySlug: string, projectId: string, endpointId: string) =>
+    ['shapeshyft', 'endpoints', entitySlug, projectId, endpointId] as const,
   analytics: (userId: string) => ['shapeshyft', 'analytics', userId] as const,
+  settings: (userId: string) => ['shapeshyft', 'settings', userId] as const,
+  storageConfig: (entitySlug: string) =>
+    ['shapeshyft', 'storageConfig', entitySlug] as const,
   // Entity query keys
   entities: () => ['shapeshyft', 'entities'] as const,
   entity: (entitySlug: string) =>

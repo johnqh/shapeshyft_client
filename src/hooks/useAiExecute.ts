@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import type {
   AiExecutionResponse,
   AiPromptResponse,
@@ -45,9 +46,28 @@ export interface UseAiExecuteReturn {
   reset: () => void;
 }
 
+interface ExecuteParams {
+  organizationPath: string;
+  projectName: string;
+  endpointName: string;
+  input: unknown;
+  method: HttpMethod;
+  apiKey?: string;
+  timeout?: number;
+}
+
+interface PromptParams {
+  organizationPath: string;
+  projectName: string;
+  endpointName: string;
+  input: unknown;
+  apiKey?: string;
+  timeout?: number;
+}
+
 /**
  * Hook for executing AI endpoints
- * Provides public (no auth) access to AI execution
+ * Uses TanStack Query mutations (each execution is unique, not cached)
  */
 export const useAiExecute = (
   networkClient: NetworkClient,
@@ -59,15 +79,35 @@ export const useAiExecute = (
     [baseUrl, networkClient, testMode]
   );
 
-  const [result, setResult] = useState<Optional<AiResult>>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Optional<string>>(null);
+  const executeMutation = useMutation({
+    mutationFn: async (params: ExecuteParams) => {
+      return client.executeAi(
+        params.organizationPath,
+        params.projectName,
+        params.endpointName,
+        params.input,
+        params.method,
+        params.apiKey,
+        params.timeout
+      );
+    },
+  });
 
-  /**
-   * Execute an AI endpoint
-   */
+  const promptMutation = useMutation({
+    mutationFn: async (params: PromptParams) => {
+      return client.getAiPrompt(
+        params.organizationPath,
+        params.projectName,
+        params.endpointName,
+        params.input,
+        params.apiKey,
+        params.timeout
+      );
+    },
+  });
+
   const execute = useCallback(
-    async (
+    (
       organizationPath: string,
       projectName: string,
       endpointName: string,
@@ -75,105 +115,80 @@ export const useAiExecute = (
       method: HttpMethod = 'POST',
       apiKey?: string,
       timeout?: number
-    ): Promise<BaseResponse<AiResult>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.executeAi(
-          organizationPath,
-          projectName,
-          endpointName,
-          input,
-          method,
-          apiKey,
-          timeout
-        );
-        if (response.success && response.data) {
-          setResult(response.data);
-        } else {
-          setError(response.error || 'AI execution failed');
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'AI execution failed';
-        setError(errorMessage);
-        console.error('[useAiExecute] execute error:', errorMessage, err);
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client]
+    ) =>
+      executeMutation.mutateAsync({
+        organizationPath,
+        projectName,
+        endpointName,
+        input,
+        method,
+        apiKey,
+        timeout,
+      }),
+    [executeMutation]
   );
 
-  /**
-   * Get the generated prompt without executing
-   */
   const getPrompt = useCallback(
-    async (
+    (
       organizationPath: string,
       projectName: string,
       endpointName: string,
       input: unknown,
       apiKey?: string,
       timeout?: number
-    ): Promise<BaseResponse<AiPromptResponse>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.getAiPrompt(
-          organizationPath,
-          projectName,
-          endpointName,
-          input,
-          apiKey,
-          timeout
-        );
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to get prompt';
-        setError(errorMessage);
-        console.error('[useAiExecute] getPrompt error:', errorMessage, err);
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client]
+    ) =>
+      promptMutation.mutateAsync({
+        organizationPath,
+        projectName,
+        endpointName,
+        input,
+        apiKey,
+        timeout,
+      }),
+    [promptMutation]
   );
 
+  // Derive result from last successful execution
+  const executeData = executeMutation.data;
+  const result: Optional<AiResult> =
+    executeData?.success && executeData.data ? executeData.data : null;
+
+  const mutationError = executeMutation.error ?? promptMutation.error;
+  // Also check for API-level errors in the response
+  const apiError =
+    executeData && !executeData.success ? executeData.error : null;
+  const error =
+    mutationError instanceof Error ? mutationError.message : (apiError ?? null);
+
   const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+    executeMutation.reset();
+    promptMutation.reset();
+  }, [executeMutation, promptMutation]);
 
   const reset = useCallback(() => {
-    setResult(null);
-    setError(null);
-    setIsLoading(false);
-  }, []);
+    executeMutation.reset();
+    promptMutation.reset();
+  }, [executeMutation, promptMutation]);
 
   return useMemo(
     () => ({
       result,
-      isLoading,
+      isLoading: executeMutation.isPending || promptMutation.isPending,
       error,
       execute,
       getPrompt,
       clearError,
       reset,
     }),
-    [result, isLoading, error, execute, getPrompt, clearError, reset]
+    [
+      result,
+      executeMutation.isPending,
+      promptMutation.isPending,
+      error,
+      execute,
+      getPrompt,
+      clearError,
+      reset,
+    ]
   );
 };

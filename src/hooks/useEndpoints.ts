@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   BaseResponse,
   Endpoint,
@@ -10,6 +11,10 @@ import type {
 } from '@sudobility/shapeshyft_types';
 import type { FirebaseIdToken } from '../types';
 import { ShapeshyftClient } from '../network/ShapeshyftClient';
+import { QUERY_KEYS } from '../types';
+
+// Stable empty array to prevent unnecessary re-renders
+const EMPTY_ENDPOINTS: Endpoint[] = [];
 
 /**
  * Return type for useEndpoints hook
@@ -19,37 +24,16 @@ export interface UseEndpointsReturn {
   isLoading: boolean;
   error: Optional<string>;
 
-  refresh: (
-    entitySlug: string,
-    projectId: string,
-    token: FirebaseIdToken,
-    params?: EndpointQueryParams
-  ) => Promise<void>;
-  getEndpoint: (
-    entitySlug: string,
-    projectId: string,
-    endpointId: string,
-    token: FirebaseIdToken
-  ) => Promise<BaseResponse<Endpoint>>;
+  refetch: () => void;
+  getEndpoint: (endpointId: string) => Promise<BaseResponse<Endpoint>>;
   createEndpoint: (
-    entitySlug: string,
-    projectId: string,
-    data: EndpointCreateRequest,
-    token: FirebaseIdToken
+    data: EndpointCreateRequest
   ) => Promise<BaseResponse<Endpoint>>;
   updateEndpoint: (
-    entitySlug: string,
-    projectId: string,
     endpointId: string,
-    data: EndpointUpdateRequest,
-    token: FirebaseIdToken
+    data: EndpointUpdateRequest
   ) => Promise<BaseResponse<Endpoint>>;
-  deleteEndpoint: (
-    entitySlug: string,
-    projectId: string,
-    endpointId: string,
-    token: FirebaseIdToken
-  ) => Promise<BaseResponse<Endpoint>>;
+  deleteEndpoint: (endpointId: string) => Promise<BaseResponse<Endpoint>>;
 
   clearError: () => void;
   reset: () => void;
@@ -57,256 +41,174 @@ export interface UseEndpointsReturn {
 
 /**
  * Hook for managing endpoints
- * Provides CRUD operations with automatic refresh after mutations
+ * Uses TanStack Query for caching with automatic refresh after mutations
  */
 export const useEndpoints = (
   networkClient: NetworkClient,
   baseUrl: string,
-  testMode: boolean = false
+  entitySlug: string | null,
+  projectId: string | null,
+  token: FirebaseIdToken | null,
+  options?: {
+    testMode?: boolean;
+    enabled?: boolean;
+    params?: EndpointQueryParams;
+  }
 ): UseEndpointsReturn => {
+  const testMode = options?.testMode ?? false;
+  const enabled =
+    (options?.enabled ?? true) && !!entitySlug && !!projectId && !!token;
+
   const client = useMemo(
     () => new ShapeshyftClient({ baseUrl, networkClient, testMode }),
     [baseUrl, networkClient, testMode]
   );
 
-  const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Optional<string>>(null);
+  const queryClient = useQueryClient();
 
-  // Store last params for refresh after mutations
-  const [lastParams, setLastParams] =
-    useState<Optional<EndpointQueryParams>>(null);
-
-  /**
-   * Refresh endpoints list
-   */
-  const refresh = useCallback(
-    async (
-      entitySlug: string,
-      projectId: string,
-      token: FirebaseIdToken,
-      params?: EndpointQueryParams
-    ): Promise<void> => {
-      setIsLoading(true);
-      setError(null);
-      setLastParams(params);
-
-      try {
-        const response = await client.getEndpoints(
-          entitySlug,
-          projectId,
-          token,
-          params
-        );
-        if (response.success && response.data) {
-          setEndpoints(response.data);
-        } else {
-          setError(response.error || 'Failed to fetch endpoints');
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to fetch endpoints';
-        setError(errorMessage);
-        console.error('[useEndpoints] refresh error:', errorMessage, err);
-      } finally {
-        setIsLoading(false);
+  const {
+    data,
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useQuery({
+    queryKey: QUERY_KEYS.endpoints(entitySlug ?? '', projectId ?? ''),
+    queryFn: async () => {
+      const response = await client.getEndpoints(
+        entitySlug!,
+        projectId!,
+        token!,
+        options?.params
+      );
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to fetch endpoints');
       }
+      return response.data;
     },
-    [client]
-  );
+    enabled,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
 
-  /**
-   * Get a single endpoint
-   */
+  const invalidateEndpoints = useCallback(() => {
+    if (entitySlug && projectId) {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.endpoints(entitySlug, projectId),
+      });
+    }
+  }, [queryClient, entitySlug, projectId]);
+
+  const createMutation = useMutation({
+    mutationFn: async (data: EndpointCreateRequest) => {
+      return client.createEndpoint(entitySlug!, projectId!, data, token!);
+    },
+    onSuccess: response => {
+      if (response.success) invalidateEndpoints();
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({
+      endpointId,
+      data,
+    }: {
+      endpointId: string;
+      data: EndpointUpdateRequest;
+    }) => {
+      return client.updateEndpoint(
+        entitySlug!,
+        projectId!,
+        endpointId,
+        data,
+        token!
+      );
+    },
+    onSuccess: response => {
+      if (response.success) invalidateEndpoints();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (endpointId: string) => {
+      return client.deleteEndpoint(entitySlug!, projectId!, endpointId, token!);
+    },
+    onSuccess: response => {
+      if (response.success) invalidateEndpoints();
+    },
+  });
+
   const getEndpoint = useCallback(
-    async (
-      entitySlug: string,
-      projectId: string,
-      endpointId: string,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<Endpoint>> => {
-      setIsLoading(true);
-      setError(null);
-
+    async (endpointId: string): Promise<BaseResponse<Endpoint>> => {
       try {
-        const response = await client.getEndpoint(
-          entitySlug,
-          projectId,
+        return await client.getEndpoint(
+          entitySlug!,
+          projectId!,
           endpointId,
-          token
+          token!
         );
-        return response;
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to get endpoint';
-        setError(errorMessage);
-        console.error('[useEndpoints] getEndpoint error:', errorMessage, err);
         return {
           success: false,
           error: errorMessage,
           timestamp: new Date().toISOString(),
         };
-      } finally {
-        setIsLoading(false);
       }
     },
-    [client]
+    [client, entitySlug, projectId, token]
   );
 
-  /**
-   * Create a new endpoint and refresh the list
-   */
   const createEndpoint = useCallback(
-    async (
-      entitySlug: string,
-      projectId: string,
-      data: EndpointCreateRequest,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<Endpoint>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.createEndpoint(
-          entitySlug,
-          projectId,
-          data,
-          token
-        );
-        if (response.success) {
-          await refresh(entitySlug, projectId, token, lastParams ?? undefined);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to create endpoint';
-        setError(errorMessage);
-        console.error(
-          '[useEndpoints] createEndpoint error:',
-          errorMessage,
-          err
-        );
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client, refresh, lastParams]
+    (data: EndpointCreateRequest) => createMutation.mutateAsync(data),
+    [createMutation]
   );
 
-  /**
-   * Update an endpoint and refresh the list
-   */
   const updateEndpoint = useCallback(
-    async (
-      entitySlug: string,
-      projectId: string,
-      endpointId: string,
-      data: EndpointUpdateRequest,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<Endpoint>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.updateEndpoint(
-          entitySlug,
-          projectId,
-          endpointId,
-          data,
-          token
-        );
-        if (response.success) {
-          await refresh(entitySlug, projectId, token, lastParams ?? undefined);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to update endpoint';
-        setError(errorMessage);
-        console.error(
-          '[useEndpoints] updateEndpoint error:',
-          errorMessage,
-          err
-        );
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client, refresh, lastParams]
+    (endpointId: string, data: EndpointUpdateRequest) =>
+      updateMutation.mutateAsync({ endpointId, data }),
+    [updateMutation]
   );
 
-  /**
-   * Delete an endpoint and refresh the list
-   */
   const deleteEndpoint = useCallback(
-    async (
-      entitySlug: string,
-      projectId: string,
-      endpointId: string,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<Endpoint>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.deleteEndpoint(
-          entitySlug,
-          projectId,
-          endpointId,
-          token
-        );
-        if (response.success) {
-          await refresh(entitySlug, projectId, token, lastParams ?? undefined);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to delete endpoint';
-        setError(errorMessage);
-        console.error(
-          '[useEndpoints] deleteEndpoint error:',
-          errorMessage,
-          err
-        );
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client, refresh, lastParams]
+    (endpointId: string) => deleteMutation.mutateAsync(endpointId),
+    [deleteMutation]
   );
+
+  const mutationError =
+    createMutation.error ?? updateMutation.error ?? deleteMutation.error;
+  const error =
+    queryError instanceof Error
+      ? queryError.message
+      : mutationError instanceof Error
+        ? mutationError.message
+        : null;
 
   const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+    createMutation.reset();
+    updateMutation.reset();
+    deleteMutation.reset();
+  }, [createMutation, updateMutation, deleteMutation]);
 
   const reset = useCallback(() => {
-    setEndpoints([]);
-    setError(null);
-    setIsLoading(false);
-    setLastParams(null);
-  }, []);
+    if (entitySlug && projectId) {
+      queryClient.removeQueries({
+        queryKey: QUERY_KEYS.endpoints(entitySlug, projectId),
+      });
+    }
+    clearError();
+  }, [queryClient, entitySlug, projectId, clearError]);
 
   return useMemo(
     () => ({
-      endpoints,
-      isLoading,
+      endpoints: data ?? EMPTY_ENDPOINTS,
+      isLoading:
+        isLoading ||
+        createMutation.isPending ||
+        updateMutation.isPending ||
+        deleteMutation.isPending,
       error,
-      refresh,
+      refetch,
       getEndpoint,
       createEndpoint,
       updateEndpoint,
@@ -315,10 +217,13 @@ export const useEndpoints = (
       reset,
     }),
     [
-      endpoints,
+      data,
       isLoading,
+      createMutation.isPending,
+      updateMutation.isPending,
+      deleteMutation.isPending,
       error,
-      refresh,
+      refetch,
       getEndpoint,
       createEndpoint,
       updateEndpoint,

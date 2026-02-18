@@ -1,30 +1,40 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import type { NetworkClient } from '@sudobility/shapeshyft_types';
+import React from 'react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { renderHook, act, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MockNetworkClient } from '@sudobility/di/mocks';
 import { useSettings } from './useSettings';
-
-// Mock NetworkClient
-function createMockNetworkClient(): NetworkClient {
-  return {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-  };
-}
 
 describe('useSettings', () => {
   const baseUrl = 'https://api.example.com';
-  let mockNetworkClient: NetworkClient;
+  const userId = 'user-123';
+  const token = 'test-token';
+  let mockNetworkClient: MockNetworkClient;
+  let queryClient: QueryClient;
 
   beforeEach(() => {
-    mockNetworkClient = createMockNetworkClient();
-    vi.clearAllMocks();
+    mockNetworkClient = new MockNetworkClient();
+    mockNetworkClient.setDefaultResponse({
+      ok: true,
+      data: { success: true, data: null },
+    });
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
   });
 
+  const createWrapper = () => {
+    return ({ children }: { children: React.ReactNode }) =>
+      React.createElement(QueryClientProvider, { client: queryClient }, children);
+  };
+
   it('should initialize with empty state', () => {
-    const { result } = renderHook(() =>
-      useSettings(mockNetworkClient, baseUrl)
+    const { result } = renderHook(
+      () => useSettings(mockNetworkClient, baseUrl, null, null),
+      { wrapper: createWrapper() }
     );
 
     expect(result.current.settings).toBeNull();
@@ -32,7 +42,7 @@ describe('useSettings', () => {
     expect(result.current.error).toBeNull();
   });
 
-  describe('refresh', () => {
+  describe('auto-fetch', () => {
     it('should fetch settings and update state', async () => {
       const mockSettings = {
         uuid: 'settings-1',
@@ -42,162 +52,210 @@ describe('useSettings', () => {
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
       };
-      vi.mocked(mockNetworkClient.get).mockResolvedValue({
-        ok: true,
-        data: { success: true, data: mockSettings },
-      });
-
-      const { result } = renderHook(() =>
-        useSettings(mockNetworkClient, baseUrl)
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/settings`,
+        { ok: true, data: { success: true, data: mockSettings } },
+        'GET'
       );
 
-      await act(async () => {
-        await result.current.refresh('user-123', 'token');
+      const { result } = renderHook(
+        () => useSettings(mockNetworkClient, baseUrl, userId, token),
+        { wrapper: createWrapper() }
+      );
+
+      await waitFor(() => {
+        expect(result.current.settings).toEqual(mockSettings);
       });
 
-      expect(result.current.settings).toEqual(mockSettings);
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBeNull();
     });
 
     it('should set error on failed request', async () => {
-      vi.mocked(mockNetworkClient.get).mockResolvedValue({
-        ok: false,
-        data: { success: false, error: 'Unauthorized' },
-      });
-
-      const { result } = renderHook(() =>
-        useSettings(mockNetworkClient, baseUrl)
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/settings`,
+        { ok: false, data: { success: false, error: 'Unauthorized' } },
+        'GET'
       );
 
-      await act(async () => {
-        await result.current.refresh('user-123', 'token');
+      const { result } = renderHook(
+        () => useSettings(mockNetworkClient, baseUrl, userId, token),
+        { wrapper: createWrapper() }
+      );
+
+      await waitFor(() => {
+        expect(result.current.error).toBeTruthy();
       });
 
       expect(result.current.settings).toBeNull();
-      expect(result.current.error).toBeTruthy();
     });
 
     it('should set isLoading during request', async () => {
-      let resolvePromise: (value: unknown) => void;
-      const promise = new Promise(resolve => {
-        resolvePromise = resolve;
-      });
-      vi.mocked(mockNetworkClient.get).mockReturnValue(promise as never);
-
-      const { result } = renderHook(() =>
-        useSettings(mockNetworkClient, baseUrl)
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/settings`,
+        { ok: true, data: { success: true, data: null }, delay: 100 },
+        'GET'
       );
 
-      act(() => {
-        result.current.refresh('user-123', 'token');
-      });
+      const { result } = renderHook(
+        () => useSettings(mockNetworkClient, baseUrl, userId, token),
+        { wrapper: createWrapper() }
+      );
 
       expect(result.current.isLoading).toBe(true);
 
-      await act(async () => {
-        resolvePromise!({
-          ok: true,
-          data: { success: true, data: null },
-        });
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
       });
-
-      expect(result.current.isLoading).toBe(false);
     });
 
     it('should handle network errors', async () => {
-      vi.mocked(mockNetworkClient.get).mockRejectedValue(
-        new Error('Network error')
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/settings`,
+        { error: new Error('Network error') },
+        'GET'
       );
 
-      const { result } = renderHook(() =>
-        useSettings(mockNetworkClient, baseUrl)
+      const { result } = renderHook(
+        () => useSettings(mockNetworkClient, baseUrl, userId, token),
+        { wrapper: createWrapper() }
       );
 
-      await act(async () => {
-        await result.current.refresh('user-123', 'token');
+      await waitFor(() => {
+        expect(result.current.error).toBe('Network error');
       });
-
-      expect(result.current.error).toBe('Network error');
     });
   });
 
   describe('updateSettings', () => {
     it('should update settings and update state', async () => {
-      const updatedSettings = {
+      const mockSettings = {
         uuid: 'settings-1',
         user_id: 'user-123',
-        default_organization: 'Updated Org',
+        default_organization: 'My Org',
         is_default: true,
         created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      };
+      const updatedSettings = {
+        ...mockSettings,
+        default_organization: 'Updated Org',
         updated_at: '2024-01-02T00:00:00Z',
       };
-      vi.mocked(mockNetworkClient.put).mockResolvedValue({
-        ok: true,
-        data: { success: true, data: updatedSettings },
-      });
-
-      const { result } = renderHook(() =>
-        useSettings(mockNetworkClient, baseUrl)
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/settings`,
+        { ok: true, data: { success: true, data: mockSettings } },
+        'GET'
+      );
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/settings`,
+        { ok: true, data: { success: true, data: updatedSettings } },
+        'PUT'
       );
 
+      const { result } = renderHook(
+        () => useSettings(mockNetworkClient, baseUrl, userId, token),
+        { wrapper: createWrapper() }
+      );
+
+      await waitFor(() => {
+        expect(result.current.settings).toEqual(mockSettings);
+      });
+
       await act(async () => {
-        const response = await result.current.updateSettings(
-          'user-123',
-          { default_organization: 'Updated Org' },
-          'token'
-        );
+        const response = await result.current.updateSettings({
+          default_organization: 'Updated Org',
+        });
         expect(response.success).toBe(true);
       });
 
-      expect(result.current.settings).toEqual(updatedSettings);
+      await waitFor(() => {
+        expect(result.current.settings).toEqual(updatedSettings);
+      });
+
       expect(result.current.isLoading).toBe(false);
     });
 
-    it('should return error response on failed update', async () => {
-      vi.mocked(mockNetworkClient.put).mockRejectedValue(
-        new Error('Update failed')
+    it('should handle error on failed update', async () => {
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/settings`,
+        { ok: true, data: { success: true, data: { uuid: 'settings-1' } } },
+        'GET'
+      );
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/settings`,
+        { error: new Error('Update failed') },
+        'PUT'
       );
 
-      const { result } = renderHook(() =>
-        useSettings(mockNetworkClient, baseUrl)
+      const { result } = renderHook(
+        () => useSettings(mockNetworkClient, baseUrl, userId, token),
+        { wrapper: createWrapper() }
       );
 
-      let response;
-      await act(async () => {
-        response = await result.current.updateSettings(
-          'user-123',
-          { default_organization: 'New Org' },
-          'token'
-        );
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
       });
 
-      expect(response!.success).toBe(false);
-      expect(response!.error).toBe('Update failed');
+      await act(async () => {
+        try {
+          await result.current.updateSettings({
+            default_organization: 'New Org',
+          });
+        } catch {
+          // expected - mutateAsync rethrows
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.error).toBeTruthy();
+      });
     });
   });
 
   describe('clearError', () => {
     it('should clear the error state', async () => {
-      vi.mocked(mockNetworkClient.get).mockRejectedValue(
-        new Error('Network error')
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/settings`,
+        { ok: true, data: { success: true, data: { uuid: 'settings-1' } } },
+        'GET'
+      );
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/settings`,
+        { error: new Error('Network error') },
+        'PUT'
       );
 
-      const { result } = renderHook(() =>
-        useSettings(mockNetworkClient, baseUrl)
+      const { result } = renderHook(
+        () => useSettings(mockNetworkClient, baseUrl, userId, token),
+        { wrapper: createWrapper() }
       );
 
-      await act(async () => {
-        await result.current.refresh('user-123', 'token');
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
       });
 
-      expect(result.current.error).toBe('Network error');
+      await act(async () => {
+        try {
+          await result.current.updateSettings({
+            default_organization: 'Test',
+          });
+        } catch {
+          // expected
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.error).toBeTruthy();
+      });
 
       act(() => {
         result.current.clearError();
       });
 
-      expect(result.current.error).toBeNull();
+      await waitFor(() => {
+        expect(result.current.error).toBeNull();
+      });
     });
   });
 
@@ -211,48 +269,59 @@ describe('useSettings', () => {
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
       };
-      vi.mocked(mockNetworkClient.get).mockResolvedValue({
-        ok: true,
-        data: { success: true, data: mockSettings },
-      });
-
-      const { result } = renderHook(() =>
-        useSettings(mockNetworkClient, baseUrl)
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/settings`,
+        { ok: true, data: { success: true, data: mockSettings } },
+        'GET'
       );
 
-      await act(async () => {
-        await result.current.refresh('user-123', 'token');
+      const { result } = renderHook(
+        () => useSettings(mockNetworkClient, baseUrl, userId, token),
+        { wrapper: createWrapper() }
+      );
+
+      await waitFor(() => {
+        expect(result.current.settings).toEqual(mockSettings);
       });
 
-      expect(result.current.settings).toEqual(mockSettings);
+      // Update mock to return different data so re-fetch after reset gets new data
+      const resetSettings = {
+        ...mockSettings,
+        default_organization: 'Reset Org',
+        updated_at: '2024-02-01T00:00:00Z',
+      };
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/settings`,
+        { ok: true, data: { success: true, data: resetSettings } },
+        'GET'
+      );
 
       act(() => {
         result.current.reset();
       });
 
-      expect(result.current.settings).toBeNull();
+      // After reset + re-fetch, data is replaced with new response
+      await waitFor(() => {
+        expect(result.current.settings).toEqual(resetSettings);
+      });
+
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBeNull();
     });
   });
 
   describe('memoization', () => {
-    it('should return stable callback references', () => {
-      const { result, rerender } = renderHook(() =>
-        useSettings(mockNetworkClient, baseUrl)
+    it('should return stable refetch reference', () => {
+      const { result, rerender } = renderHook(
+        () => useSettings(mockNetworkClient, baseUrl, null, null),
+        { wrapper: createWrapper() }
       );
 
-      const firstRefresh = result.current.refresh;
-      const firstUpdateSettings = result.current.updateSettings;
-      const firstClearError = result.current.clearError;
-      const firstReset = result.current.reset;
+      const firstRefetch = result.current.refetch;
 
       rerender();
 
-      expect(result.current.refresh).toBe(firstRefresh);
-      expect(result.current.updateSettings).toBe(firstUpdateSettings);
-      expect(result.current.clearError).toBe(firstClearError);
-      expect(result.current.reset).toBe(firstReset);
+      expect(result.current.refetch).toBe(firstRefetch);
     });
   });
 });

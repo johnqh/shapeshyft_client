@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   BaseResponse,
   CreateEntityRequest,
@@ -14,6 +15,12 @@ import type {
 } from '@sudobility/types';
 import type { FirebaseIdToken } from '../types';
 import { ShapeshyftClient } from '../network/ShapeshyftClient';
+import { QUERY_KEYS } from '../types';
+
+// Stable empty arrays to prevent unnecessary re-renders
+const EMPTY_ENTITIES: EntityWithRole[] = [];
+const EMPTY_MEMBERS: EntityMember[] = [];
+const EMPTY_INVITATIONS: EntityInvitation[] = [];
 
 /**
  * Return type for useEntities hook
@@ -28,65 +35,34 @@ export interface UseEntitiesReturn {
   error: Optional<string>;
 
   // Entity operations
-  refreshEntities: (token: FirebaseIdToken) => Promise<void>;
-  getEntity: (
-    entitySlug: string,
-    token: FirebaseIdToken
-  ) => Promise<BaseResponse<EntityWithRole>>;
-  createEntity: (
-    data: CreateEntityRequest,
-    token: FirebaseIdToken
-  ) => Promise<BaseResponse<Entity>>;
+  refetchEntities: () => void;
+  getEntity: (entitySlug: string) => Promise<BaseResponse<EntityWithRole>>;
+  createEntity: (data: CreateEntityRequest) => Promise<BaseResponse<Entity>>;
   updateEntity: (
     entitySlug: string,
-    data: UpdateEntityRequest,
-    token: FirebaseIdToken
+    data: UpdateEntityRequest
   ) => Promise<BaseResponse<Entity>>;
-  deleteEntity: (
-    entitySlug: string,
-    token: FirebaseIdToken
-  ) => Promise<BaseResponse<void>>;
+  deleteEntity: (entitySlug: string) => Promise<BaseResponse<void>>;
 
   // Member operations
-  refreshMembers: (entitySlug: string, token: FirebaseIdToken) => Promise<void>;
+  refetchMembers: () => void;
   updateMemberRole: (
-    entitySlug: string,
     memberId: string,
-    role: EntityRole,
-    token: FirebaseIdToken
+    role: EntityRole
   ) => Promise<BaseResponse<EntityMember>>;
-  removeMember: (
-    entitySlug: string,
-    memberId: string,
-    token: FirebaseIdToken
-  ) => Promise<BaseResponse<void>>;
+  removeMember: (memberId: string) => Promise<BaseResponse<void>>;
 
   // Invitation operations
-  refreshInvitations: (
-    entitySlug: string,
-    token: FirebaseIdToken
-  ) => Promise<void>;
+  refetchInvitations: () => void;
   createInvitation: (
-    entitySlug: string,
-    data: InviteMemberRequest,
-    token: FirebaseIdToken
+    data: InviteMemberRequest
   ) => Promise<BaseResponse<EntityInvitation>>;
-  cancelInvitation: (
-    entitySlug: string,
-    invitationId: string,
-    token: FirebaseIdToken
-  ) => Promise<BaseResponse<void>>;
+  cancelInvitation: (invitationId: string) => Promise<BaseResponse<void>>;
 
   // My invitations operations
-  refreshMyInvitations: (token: FirebaseIdToken) => Promise<void>;
-  acceptInvitation: (
-    invitationToken: string,
-    token: FirebaseIdToken
-  ) => Promise<BaseResponse<void>>;
-  declineInvitation: (
-    invitationToken: string,
-    token: FirebaseIdToken
-  ) => Promise<BaseResponse<void>>;
+  refetchMyInvitations: () => void;
+  acceptInvitation: (invitationToken: string) => Promise<BaseResponse<void>>;
+  declineInvitation: (invitationToken: string) => Promise<BaseResponse<void>>;
 
   clearError: () => void;
   reset: () => void;
@@ -94,569 +70,438 @@ export interface UseEntitiesReturn {
 
 /**
  * Hook for managing entities, members, and invitations
- * Provides CRUD operations with automatic refresh after mutations
+ * Uses TanStack Query for caching with automatic refresh after mutations
  */
 export const useEntities = (
   networkClient: NetworkClient,
   baseUrl: string,
-  testMode: boolean = false
+  token: FirebaseIdToken | null,
+  entitySlug: string | null,
+  options?: {
+    testMode?: boolean;
+    enabled?: boolean;
+  }
 ): UseEntitiesReturn => {
+  const testMode = options?.testMode ?? false;
+  const enabled = (options?.enabled ?? true) && !!token;
+  const entityEnabled = enabled && !!entitySlug;
+
   const client = useMemo(
     () => new ShapeshyftClient({ baseUrl, networkClient, testMode }),
     [baseUrl, networkClient, testMode]
   );
 
-  const [entities, setEntities] = useState<EntityWithRole[]>([]);
-  const [currentEntity, setCurrentEntity] =
-    useState<Optional<EntityWithRole>>(null);
-  const [members, setMembers] = useState<EntityMember[]>([]);
-  const [invitations, setInvitations] = useState<EntityInvitation[]>([]);
-  const [myInvitations, setMyInvitations] = useState<EntityInvitation[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Optional<string>>(null);
+  const queryClient = useQueryClient();
 
   // =============================================================================
-  // Entity Operations
+  // Queries
   // =============================================================================
 
-  const refreshEntities = useCallback(
-    async (token: FirebaseIdToken): Promise<void> => {
-      setIsLoading(true);
-      setError(null);
+  const {
+    data: entitiesData,
+    isLoading: entitiesLoading,
+    error: entitiesError,
+    refetch: refetchEntities,
+  } = useQuery({
+    queryKey: QUERY_KEYS.entities(),
+    queryFn: async () => {
+      const response = await client.getEntities(token!);
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to fetch entities');
+      }
+      return response.data;
+    },
+    enabled,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
 
-      try {
-        const response = await client.getEntities(token);
-        if (response.success && response.data) {
-          setEntities(response.data);
-        } else {
-          setError(response.error || 'Failed to fetch entities');
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to fetch entities';
-        setError(errorMessage);
-        console.error(
-          '[useEntities] refreshEntities error:',
-          errorMessage,
-          err
-        );
-      } finally {
-        setIsLoading(false);
+  const {
+    data: membersData,
+    isLoading: membersLoading,
+    refetch: refetchMembers,
+  } = useQuery({
+    queryKey: QUERY_KEYS.entityMembers(entitySlug ?? ''),
+    queryFn: async () => {
+      const response = await client.getEntityMembers(entitySlug!, token!);
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to fetch members');
+      }
+      return response.data;
+    },
+    enabled: entityEnabled,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+
+  const {
+    data: invitationsData,
+    isLoading: invitationsLoading,
+    refetch: refetchInvitations,
+  } = useQuery({
+    queryKey: QUERY_KEYS.entityInvitations(entitySlug ?? ''),
+    queryFn: async () => {
+      const response = await client.getEntityInvitations(entitySlug!, token!);
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to fetch invitations');
+      }
+      return response.data;
+    },
+    enabled: entityEnabled,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+
+  const {
+    data: myInvitationsData,
+    isLoading: myInvitationsLoading,
+    refetch: refetchMyInvitations,
+  } = useQuery({
+    queryKey: QUERY_KEYS.myInvitations(),
+    queryFn: async () => {
+      const response = await client.getMyInvitations(token!);
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to fetch my invitations');
+      }
+      return response.data;
+    },
+    enabled,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+
+  // =============================================================================
+  // Entity Mutations
+  // =============================================================================
+
+  const createEntityMutation = useMutation({
+    mutationFn: async (data: CreateEntityRequest) => {
+      return client.createEntity(data, token!);
+    },
+    onSuccess: response => {
+      if (response.success) {
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.entities() });
       }
     },
-    [client]
-  );
+  });
+
+  const updateEntityMutation = useMutation({
+    mutationFn: async ({
+      slug,
+      data,
+    }: {
+      slug: string;
+      data: UpdateEntityRequest;
+    }) => {
+      return client.updateEntity(slug, data, token!);
+    },
+    onSuccess: response => {
+      if (response.success) {
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.entities() });
+      }
+    },
+  });
+
+  const deleteEntityMutation = useMutation({
+    mutationFn: async (slug: string) => {
+      return client.deleteEntity(slug, token!);
+    },
+    onSuccess: response => {
+      if (response.success) {
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.entities() });
+      }
+    },
+  });
+
+  // =============================================================================
+  // Member Mutations
+  // =============================================================================
+
+  const updateMemberRoleMutation = useMutation({
+    mutationFn: async ({
+      memberId,
+      role,
+    }: {
+      memberId: string;
+      role: EntityRole;
+    }) => {
+      return client.updateEntityMemberRole(entitySlug!, memberId, role, token!);
+    },
+    onSuccess: response => {
+      if (response.success && entitySlug) {
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.entityMembers(entitySlug),
+        });
+      }
+    },
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: async (memberId: string) => {
+      return client.removeEntityMember(entitySlug!, memberId, token!);
+    },
+    onSuccess: response => {
+      if (response.success && entitySlug) {
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.entityMembers(entitySlug),
+        });
+      }
+    },
+  });
+
+  // =============================================================================
+  // Invitation Mutations
+  // =============================================================================
+
+  const createInvitationMutation = useMutation({
+    mutationFn: async (data: InviteMemberRequest) => {
+      return client.createEntityInvitation(entitySlug!, data, token!);
+    },
+    onSuccess: response => {
+      if (response.success && entitySlug) {
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.entityInvitations(entitySlug),
+        });
+      }
+    },
+  });
+
+  const cancelInvitationMutation = useMutation({
+    mutationFn: async (invitationId: string) => {
+      return client.cancelEntityInvitation(entitySlug!, invitationId, token!);
+    },
+    onSuccess: response => {
+      if (response.success && entitySlug) {
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.entityInvitations(entitySlug),
+        });
+      }
+    },
+  });
+
+  const acceptInvitationMutation = useMutation({
+    mutationFn: async (invitationToken: string) => {
+      return client.acceptInvitation(invitationToken, token!);
+    },
+    onSuccess: response => {
+      if (response.success) {
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myInvitations() });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.entities() });
+      }
+    },
+  });
+
+  const declineInvitationMutation = useMutation({
+    mutationFn: async (invitationToken: string) => {
+      return client.declineInvitation(invitationToken, token!);
+    },
+    onSuccess: response => {
+      if (response.success) {
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myInvitations() });
+      }
+    },
+  });
+
+  // =============================================================================
+  // Wrapped Mutation Functions
+  // =============================================================================
 
   const getEntity = useCallback(
-    async (
-      entitySlug: string,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<EntityWithRole>> => {
-      setIsLoading(true);
-      setError(null);
-
+    async (slug: string): Promise<BaseResponse<EntityWithRole>> => {
       try {
-        const response = await client.getEntity(entitySlug, token);
-        if (response.success && response.data) {
-          setCurrentEntity(response.data);
-        }
-        return response;
+        return await client.getEntity(slug, token!);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to get entity';
-        setError(errorMessage);
-        console.error('[useEntities] getEntity error:', errorMessage, err);
         return {
           success: false,
           error: errorMessage,
           timestamp: new Date().toISOString(),
         };
-      } finally {
-        setIsLoading(false);
       }
     },
-    [client]
+    [client, token]
   );
 
   const createEntity = useCallback(
-    async (
-      data: CreateEntityRequest,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<Entity>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.createEntity(data, token);
-        if (response.success) {
-          await refreshEntities(token);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to create entity';
-        setError(errorMessage);
-        console.error('[useEntities] createEntity error:', errorMessage, err);
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client, refreshEntities]
+    (data: CreateEntityRequest) => createEntityMutation.mutateAsync(data),
+    [createEntityMutation]
   );
 
   const updateEntity = useCallback(
-    async (
-      entitySlug: string,
-      data: UpdateEntityRequest,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<Entity>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.updateEntity(entitySlug, data, token);
-        if (response.success) {
-          await refreshEntities(token);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to update entity';
-        setError(errorMessage);
-        console.error('[useEntities] updateEntity error:', errorMessage, err);
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client, refreshEntities]
+    (slug: string, data: UpdateEntityRequest) =>
+      updateEntityMutation.mutateAsync({ slug, data }),
+    [updateEntityMutation]
   );
 
   const deleteEntity = useCallback(
-    async (
-      entitySlug: string,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<void>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.deleteEntity(entitySlug, token);
-        if (response.success) {
-          await refreshEntities(token);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to delete entity';
-        setError(errorMessage);
-        console.error('[useEntities] deleteEntity error:', errorMessage, err);
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client, refreshEntities]
-  );
-
-  // =============================================================================
-  // Member Operations
-  // =============================================================================
-
-  const refreshMembers = useCallback(
-    async (entitySlug: string, token: FirebaseIdToken): Promise<void> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.getEntityMembers(entitySlug, token);
-        if (response.success && response.data) {
-          setMembers(response.data);
-        } else {
-          setError(response.error || 'Failed to fetch members');
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to fetch members';
-        setError(errorMessage);
-        console.error('[useEntities] refreshMembers error:', errorMessage, err);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client]
+    (slug: string) => deleteEntityMutation.mutateAsync(slug),
+    [deleteEntityMutation]
   );
 
   const updateMemberRole = useCallback(
-    async (
-      entitySlug: string,
-      memberId: string,
-      role: EntityRole,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<EntityMember>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.updateEntityMemberRole(
-          entitySlug,
-          memberId,
-          role,
-          token
-        );
-        if (response.success) {
-          await refreshMembers(entitySlug, token);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to update member role';
-        setError(errorMessage);
-        console.error(
-          '[useEntities] updateMemberRole error:',
-          errorMessage,
-          err
-        );
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client, refreshMembers]
+    (memberId: string, role: EntityRole) =>
+      updateMemberRoleMutation.mutateAsync({ memberId, role }),
+    [updateMemberRoleMutation]
   );
 
   const removeMember = useCallback(
-    async (
-      entitySlug: string,
-      memberId: string,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<void>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.removeEntityMember(
-          entitySlug,
-          memberId,
-          token
-        );
-        if (response.success) {
-          await refreshMembers(entitySlug, token);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to remove member';
-        setError(errorMessage);
-        console.error('[useEntities] removeMember error:', errorMessage, err);
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client, refreshMembers]
-  );
-
-  // =============================================================================
-  // Invitation Operations
-  // =============================================================================
-
-  const refreshInvitations = useCallback(
-    async (entitySlug: string, token: FirebaseIdToken): Promise<void> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.getEntityInvitations(entitySlug, token);
-        if (response.success && response.data) {
-          setInvitations(response.data);
-        } else {
-          setError(response.error || 'Failed to fetch invitations');
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to fetch invitations';
-        setError(errorMessage);
-        console.error(
-          '[useEntities] refreshInvitations error:',
-          errorMessage,
-          err
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client]
+    (memberId: string) => removeMemberMutation.mutateAsync(memberId),
+    [removeMemberMutation]
   );
 
   const createInvitation = useCallback(
-    async (
-      entitySlug: string,
-      data: InviteMemberRequest,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<EntityInvitation>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.createEntityInvitation(
-          entitySlug,
-          data,
-          token
-        );
-        if (response.success) {
-          await refreshInvitations(entitySlug, token);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to create invitation';
-        setError(errorMessage);
-        console.error(
-          '[useEntities] createInvitation error:',
-          errorMessage,
-          err
-        );
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client, refreshInvitations]
+    (data: InviteMemberRequest) => createInvitationMutation.mutateAsync(data),
+    [createInvitationMutation]
   );
 
   const cancelInvitation = useCallback(
-    async (
-      entitySlug: string,
-      invitationId: string,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<void>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.cancelEntityInvitation(
-          entitySlug,
-          invitationId,
-          token
-        );
-        if (response.success) {
-          await refreshInvitations(entitySlug, token);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to cancel invitation';
-        setError(errorMessage);
-        console.error(
-          '[useEntities] cancelInvitation error:',
-          errorMessage,
-          err
-        );
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client, refreshInvitations]
-  );
-
-  // =============================================================================
-  // My Invitations Operations
-  // =============================================================================
-
-  const refreshMyInvitations = useCallback(
-    async (token: FirebaseIdToken): Promise<void> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.getMyInvitations(token);
-        if (response.success && response.data) {
-          setMyInvitations(response.data);
-        } else {
-          setError(response.error || 'Failed to fetch my invitations');
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to fetch my invitations';
-        setError(errorMessage);
-        console.error(
-          '[useEntities] refreshMyInvitations error:',
-          errorMessage,
-          err
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client]
+    (invitationId: string) =>
+      cancelInvitationMutation.mutateAsync(invitationId),
+    [cancelInvitationMutation]
   );
 
   const acceptInvitation = useCallback(
-    async (
-      invitationToken: string,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<void>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.acceptInvitation(invitationToken, token);
-        if (response.success) {
-          await refreshMyInvitations(token);
-          await refreshEntities(token);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to accept invitation';
-        setError(errorMessage);
-        console.error(
-          '[useEntities] acceptInvitation error:',
-          errorMessage,
-          err
-        );
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client, refreshMyInvitations, refreshEntities]
+    (invitationToken: string) =>
+      acceptInvitationMutation.mutateAsync(invitationToken),
+    [acceptInvitationMutation]
   );
 
   const declineInvitation = useCallback(
-    async (
-      invitationToken: string,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<void>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.declineInvitation(invitationToken, token);
-        if (response.success) {
-          await refreshMyInvitations(token);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to decline invitation';
-        setError(errorMessage);
-        console.error(
-          '[useEntities] declineInvitation error:',
-          errorMessage,
-          err
-        );
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client, refreshMyInvitations]
+    (invitationToken: string) =>
+      declineInvitationMutation.mutateAsync(invitationToken),
+    [declineInvitationMutation]
   );
 
   // =============================================================================
-  // Utility Operations
+  // Error and Loading State
   // =============================================================================
 
+  const isLoading =
+    entitiesLoading ||
+    membersLoading ||
+    invitationsLoading ||
+    myInvitationsLoading ||
+    createEntityMutation.isPending ||
+    updateEntityMutation.isPending ||
+    deleteEntityMutation.isPending ||
+    updateMemberRoleMutation.isPending ||
+    removeMemberMutation.isPending ||
+    createInvitationMutation.isPending ||
+    cancelInvitationMutation.isPending ||
+    acceptInvitationMutation.isPending ||
+    declineInvitationMutation.isPending;
+
+  const queryError = entitiesError;
+  const mutationError =
+    createEntityMutation.error ??
+    updateEntityMutation.error ??
+    deleteEntityMutation.error ??
+    updateMemberRoleMutation.error ??
+    removeMemberMutation.error ??
+    createInvitationMutation.error ??
+    cancelInvitationMutation.error ??
+    acceptInvitationMutation.error ??
+    declineInvitationMutation.error;
+
+  const error =
+    queryError instanceof Error
+      ? queryError.message
+      : mutationError instanceof Error
+        ? mutationError.message
+        : null;
+
   const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+    createEntityMutation.reset();
+    updateEntityMutation.reset();
+    deleteEntityMutation.reset();
+    updateMemberRoleMutation.reset();
+    removeMemberMutation.reset();
+    createInvitationMutation.reset();
+    cancelInvitationMutation.reset();
+    acceptInvitationMutation.reset();
+    declineInvitationMutation.reset();
+  }, [
+    createEntityMutation,
+    updateEntityMutation,
+    deleteEntityMutation,
+    updateMemberRoleMutation,
+    removeMemberMutation,
+    createInvitationMutation,
+    cancelInvitationMutation,
+    acceptInvitationMutation,
+    declineInvitationMutation,
+  ]);
 
   const reset = useCallback(() => {
-    setEntities([]);
-    setCurrentEntity(null);
-    setMembers([]);
-    setInvitations([]);
-    setMyInvitations([]);
-    setError(null);
-    setIsLoading(false);
-  }, []);
+    queryClient.removeQueries({ queryKey: QUERY_KEYS.entities() });
+    queryClient.removeQueries({ queryKey: QUERY_KEYS.myInvitations() });
+    if (entitySlug) {
+      queryClient.removeQueries({
+        queryKey: QUERY_KEYS.entityMembers(entitySlug),
+      });
+      queryClient.removeQueries({
+        queryKey: QUERY_KEYS.entityInvitations(entitySlug),
+      });
+    }
+    clearError();
+  }, [queryClient, entitySlug, clearError]);
+
+  // currentEntity is derived from the entities list -- not a separate query
+  const currentEntity = useMemo(
+    () =>
+      entitySlug
+        ? ((entitiesData ?? []).find(e => e.entitySlug === entitySlug) ?? null)
+        : null,
+    [entitiesData, entitySlug]
+  );
 
   return useMemo(
     () => ({
-      entities,
+      entities: entitiesData ?? EMPTY_ENTITIES,
       currentEntity,
-      members,
-      invitations,
-      myInvitations,
+      members: membersData ?? EMPTY_MEMBERS,
+      invitations: invitationsData ?? EMPTY_INVITATIONS,
+      myInvitations: myInvitationsData ?? EMPTY_INVITATIONS,
       isLoading,
       error,
-      refreshEntities,
+      refetchEntities,
       getEntity,
       createEntity,
       updateEntity,
       deleteEntity,
-      refreshMembers,
+      refetchMembers,
       updateMemberRole,
       removeMember,
-      refreshInvitations,
+      refetchInvitations,
       createInvitation,
       cancelInvitation,
-      refreshMyInvitations,
+      refetchMyInvitations,
       acceptInvitation,
       declineInvitation,
       clearError,
       reset,
     }),
     [
-      entities,
+      entitiesData,
       currentEntity,
-      members,
-      invitations,
-      myInvitations,
+      membersData,
+      invitationsData,
+      myInvitationsData,
       isLoading,
       error,
-      refreshEntities,
+      refetchEntities,
       getEntity,
       createEntity,
       updateEntity,
       deleteEntity,
-      refreshMembers,
+      refetchMembers,
       updateMemberRole,
       removeMember,
-      refreshInvitations,
+      refetchInvitations,
       createInvitation,
       cancelInvitation,
-      refreshMyInvitations,
+      refetchMyInvitations,
       acceptInvitation,
       declineInvitation,
       clearError,

@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   BaseResponse,
   LlmApiKeyCreateRequest,
@@ -9,6 +10,10 @@ import type {
 } from '@sudobility/shapeshyft_types';
 import type { FirebaseIdToken } from '../types';
 import { ShapeshyftClient } from '../network/ShapeshyftClient';
+import { QUERY_KEYS } from '../types';
+
+// Stable empty array to prevent unnecessary re-renders
+const EMPTY_KEYS: LlmApiKeySafe[] = [];
 
 /**
  * Return type for useKeys hook
@@ -18,28 +23,16 @@ export interface UseKeysReturn {
   isLoading: boolean;
   error: Optional<string>;
 
-  refresh: (entitySlug: string, token: FirebaseIdToken) => Promise<void>;
-  getKey: (
-    entitySlug: string,
-    keyId: string,
-    token: FirebaseIdToken
-  ) => Promise<BaseResponse<LlmApiKeySafe>>;
+  refetch: () => void;
+  getKey: (keyId: string) => Promise<BaseResponse<LlmApiKeySafe>>;
   createKey: (
-    entitySlug: string,
-    data: LlmApiKeyCreateRequest,
-    token: FirebaseIdToken
+    data: LlmApiKeyCreateRequest
   ) => Promise<BaseResponse<LlmApiKeySafe>>;
   updateKey: (
-    entitySlug: string,
     keyId: string,
-    data: LlmApiKeyUpdateRequest,
-    token: FirebaseIdToken
+    data: LlmApiKeyUpdateRequest
   ) => Promise<BaseResponse<LlmApiKeySafe>>;
-  deleteKey: (
-    entitySlug: string,
-    keyId: string,
-    token: FirebaseIdToken
-  ) => Promise<BaseResponse<LlmApiKeySafe>>;
+  deleteKey: (keyId: string) => Promise<BaseResponse<LlmApiKeySafe>>;
 
   clearError: () => void;
   reset: () => void;
@@ -47,206 +40,151 @@ export interface UseKeysReturn {
 
 /**
  * Hook for managing LLM API keys
- * Provides CRUD operations with automatic refresh after mutations
+ * Uses TanStack Query for caching with automatic refresh after mutations
  */
 export const useKeys = (
   networkClient: NetworkClient,
   baseUrl: string,
-  testMode: boolean = false
+  entitySlug: string | null,
+  token: FirebaseIdToken | null,
+  options?: {
+    testMode?: boolean;
+    enabled?: boolean;
+  }
 ): UseKeysReturn => {
+  const testMode = options?.testMode ?? false;
+  const enabled = (options?.enabled ?? true) && !!entitySlug && !!token;
+
   const client = useMemo(
     () => new ShapeshyftClient({ baseUrl, networkClient, testMode }),
     [baseUrl, networkClient, testMode]
   );
 
-  const [keys, setKeys] = useState<LlmApiKeySafe[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Optional<string>>(null);
+  const queryClient = useQueryClient();
 
-  /**
-   * Refresh keys list
-   */
-  const refresh = useCallback(
-    async (entitySlug: string, token: FirebaseIdToken): Promise<void> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.getKeys(entitySlug, token);
-        if (response.success && response.data) {
-          setKeys(response.data);
-        } else {
-          setError(response.error || 'Failed to fetch keys');
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to fetch keys';
-        setError(errorMessage);
-        console.error('[useKeys] refresh error:', errorMessage, err);
-      } finally {
-        setIsLoading(false);
+  const {
+    data,
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useQuery({
+    queryKey: QUERY_KEYS.keys(entitySlug ?? ''),
+    queryFn: async () => {
+      const response = await client.getKeys(entitySlug!, token!);
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to fetch keys');
       }
+      return response.data;
     },
-    [client]
-  );
+    enabled,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
 
-  /**
-   * Get a single key
-   */
+  const invalidateKeys = useCallback(() => {
+    if (entitySlug) {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.keys(entitySlug) });
+    }
+  }, [queryClient, entitySlug]);
+
+  const createMutation = useMutation({
+    mutationFn: async (data: LlmApiKeyCreateRequest) => {
+      return client.createKey(entitySlug!, data, token!);
+    },
+    onSuccess: response => {
+      if (response.success) invalidateKeys();
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({
+      keyId,
+      data,
+    }: {
+      keyId: string;
+      data: LlmApiKeyUpdateRequest;
+    }) => {
+      return client.updateKey(entitySlug!, keyId, data, token!);
+    },
+    onSuccess: response => {
+      if (response.success) invalidateKeys();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (keyId: string) => {
+      return client.deleteKey(entitySlug!, keyId, token!);
+    },
+    onSuccess: response => {
+      if (response.success) invalidateKeys();
+    },
+  });
+
   const getKey = useCallback(
-    async (
-      entitySlug: string,
-      keyId: string,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<LlmApiKeySafe>> => {
-      setIsLoading(true);
-      setError(null);
-
+    async (keyId: string): Promise<BaseResponse<LlmApiKeySafe>> => {
       try {
-        const response = await client.getKey(entitySlug, keyId, token);
-        return response;
+        return await client.getKey(entitySlug!, keyId, token!);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to get key';
-        setError(errorMessage);
-        console.error('[useKeys] getKey error:', errorMessage, err);
         return {
           success: false,
           error: errorMessage,
           timestamp: new Date().toISOString(),
         };
-      } finally {
-        setIsLoading(false);
       }
     },
-    [client]
+    [client, entitySlug, token]
   );
 
-  /**
-   * Create a new key and refresh the list
-   */
   const createKey = useCallback(
-    async (
-      entitySlug: string,
-      data: LlmApiKeyCreateRequest,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<LlmApiKeySafe>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.createKey(entitySlug, data, token);
-        if (response.success) {
-          // Refresh the list after successful creation
-          await refresh(entitySlug, token);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to create key';
-        setError(errorMessage);
-        console.error('[useKeys] createKey error:', errorMessage, err);
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client, refresh]
+    (data: LlmApiKeyCreateRequest) => createMutation.mutateAsync(data),
+    [createMutation]
   );
 
-  /**
-   * Update a key and refresh the list
-   */
   const updateKey = useCallback(
-    async (
-      entitySlug: string,
-      keyId: string,
-      data: LlmApiKeyUpdateRequest,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<LlmApiKeySafe>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.updateKey(entitySlug, keyId, data, token);
-        if (response.success) {
-          // Refresh the list after successful update
-          await refresh(entitySlug, token);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to update key';
-        setError(errorMessage);
-        console.error('[useKeys] updateKey error:', errorMessage, err);
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client, refresh]
+    (keyId: string, data: LlmApiKeyUpdateRequest) =>
+      updateMutation.mutateAsync({ keyId, data }),
+    [updateMutation]
   );
 
-  /**
-   * Delete a key and refresh the list
-   */
   const deleteKey = useCallback(
-    async (
-      entitySlug: string,
-      keyId: string,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<LlmApiKeySafe>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.deleteKey(entitySlug, keyId, token);
-        if (response.success) {
-          // Refresh the list after successful deletion
-          await refresh(entitySlug, token);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to delete key';
-        setError(errorMessage);
-        console.error('[useKeys] deleteKey error:', errorMessage, err);
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client, refresh]
+    (keyId: string) => deleteMutation.mutateAsync(keyId),
+    [deleteMutation]
   );
+
+  const mutationError =
+    createMutation.error ?? updateMutation.error ?? deleteMutation.error;
+  const error =
+    queryError instanceof Error
+      ? queryError.message
+      : mutationError instanceof Error
+        ? mutationError.message
+        : null;
 
   const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+    createMutation.reset();
+    updateMutation.reset();
+    deleteMutation.reset();
+  }, [createMutation, updateMutation, deleteMutation]);
 
   const reset = useCallback(() => {
-    setKeys([]);
-    setError(null);
-    setIsLoading(false);
-  }, []);
+    if (entitySlug) {
+      queryClient.removeQueries({ queryKey: QUERY_KEYS.keys(entitySlug) });
+    }
+    clearError();
+  }, [queryClient, entitySlug, clearError]);
 
   return useMemo(
     () => ({
-      keys,
-      isLoading,
+      keys: data ?? EMPTY_KEYS,
+      isLoading:
+        isLoading ||
+        createMutation.isPending ||
+        updateMutation.isPending ||
+        deleteMutation.isPending,
       error,
-      refresh,
+      refetch,
       getKey,
       createKey,
       updateKey,
@@ -255,10 +193,13 @@ export const useKeys = (
       reset,
     }),
     [
-      keys,
+      data,
       isLoading,
+      createMutation.isPending,
+      updateMutation.isPending,
+      deleteMutation.isPending,
       error,
-      refresh,
+      refetch,
       getKey,
       createKey,
       updateKey,

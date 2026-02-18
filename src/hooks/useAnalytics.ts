@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   AnalyticsResponse,
   NetworkClient,
@@ -7,6 +8,7 @@ import type {
 } from '@sudobility/shapeshyft_types';
 import type { FirebaseIdToken } from '../types';
 import { ShapeshyftClient } from '../network/ShapeshyftClient';
+import { QUERY_KEYS } from '../types';
 
 /**
  * Return type for useAnalytics hook
@@ -16,11 +18,7 @@ export interface UseAnalyticsReturn {
   isLoading: boolean;
   error: Optional<string>;
 
-  refresh: (
-    userId: string,
-    token: FirebaseIdToken,
-    params?: UsageAnalyticsQueryParams
-  ) => Promise<void>;
+  refetch: () => void;
 
   clearError: () => void;
   reset: () => void;
@@ -28,72 +26,73 @@ export interface UseAnalyticsReturn {
 
 /**
  * Hook for fetching usage analytics
- * Provides read-only access to analytics data
+ * Uses TanStack Query for caching
  */
 export const useAnalytics = (
   networkClient: NetworkClient,
   baseUrl: string,
-  testMode: boolean = false
+  userId: string | null,
+  token: FirebaseIdToken | null,
+  options?: {
+    testMode?: boolean;
+    enabled?: boolean;
+    params?: UsageAnalyticsQueryParams;
+  }
 ): UseAnalyticsReturn => {
+  const testMode = options?.testMode ?? false;
+  const enabled = (options?.enabled ?? true) && !!userId && !!token;
+
   const client = useMemo(
     () => new ShapeshyftClient({ baseUrl, networkClient, testMode }),
     [baseUrl, networkClient, testMode]
   );
 
-  const [analytics, setAnalytics] = useState<Optional<AnalyticsResponse>>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Optional<string>>(null);
+  const queryClient = useQueryClient();
 
-  /**
-   * Refresh analytics data
-   */
-  const refresh = useCallback(
-    async (
-      userId: string,
-      token: FirebaseIdToken,
-      params?: UsageAnalyticsQueryParams
-    ): Promise<void> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.getAnalytics(userId, token, params);
-        if (response.success && response.data) {
-          setAnalytics(response.data);
-        } else {
-          setError(response.error || 'Failed to fetch analytics');
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to fetch analytics';
-        setError(errorMessage);
-        console.error('[useAnalytics] refresh error:', errorMessage, err);
-      } finally {
-        setIsLoading(false);
+  const {
+    data,
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useQuery({
+    queryKey: QUERY_KEYS.analytics(userId ?? ''),
+    queryFn: async () => {
+      const response = await client.getAnalytics(
+        userId!,
+        token!,
+        options?.params
+      );
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to fetch analytics');
       }
+      return response.data;
     },
-    [client]
-  );
+    enabled,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+
+  const error = queryError instanceof Error ? queryError.message : null;
 
   const clearError = useCallback(() => {
-    setError(null);
+    // TanStack Query manages error state; reset by refetching
   }, []);
 
   const reset = useCallback(() => {
-    setAnalytics(null);
-    setError(null);
-    setIsLoading(false);
-  }, []);
+    if (userId) {
+      queryClient.resetQueries({ queryKey: QUERY_KEYS.analytics(userId) });
+    }
+  }, [queryClient, userId]);
 
   return useMemo(
     () => ({
-      analytics,
+      analytics: data ?? null,
       isLoading,
       error,
-      refresh,
+      refetch,
       clearError,
       reset,
     }),
-    [analytics, isLoading, error, refresh, clearError, reset]
+    [data, isLoading, error, refetch, clearError, reset]
   );
 };

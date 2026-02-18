@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   BaseResponse,
   EntityStorageConfig,
@@ -9,6 +10,7 @@ import type {
 } from '@sudobility/shapeshyft_types';
 import type { FirebaseIdToken } from '../types';
 import { ShapeshyftClient } from '../network/ShapeshyftClient';
+import { QUERY_KEYS } from '../types';
 
 /**
  * Return type for useStorageConfig hook
@@ -17,24 +19,16 @@ export interface UseStorageConfigReturn {
   storageConfig: EntityStorageConfig | null;
   isLoading: boolean;
   error: Optional<string>;
-  /** Whether storage is configured for the entity */
   hasConfig: boolean;
 
-  refresh: (entitySlug: string, token: FirebaseIdToken) => Promise<void>;
+  refetch: () => void;
   createOrUpdate: (
-    entitySlug: string,
-    data: StorageConfigCreateRequest,
-    token: FirebaseIdToken
+    data: StorageConfigCreateRequest
   ) => Promise<BaseResponse<EntityStorageConfig>>;
   update: (
-    entitySlug: string,
-    data: StorageConfigUpdateRequest,
-    token: FirebaseIdToken
+    data: StorageConfigUpdateRequest
   ) => Promise<BaseResponse<EntityStorageConfig>>;
-  deleteConfig: (
-    entitySlug: string,
-    token: FirebaseIdToken
-  ) => Promise<BaseResponse<EntityStorageConfig>>;
+  deleteConfig: () => Promise<BaseResponse<EntityStorageConfig>>;
 
   clearError: () => void;
   reset: () => void;
@@ -42,207 +36,161 @@ export interface UseStorageConfigReturn {
 
 /**
  * Hook for managing entity storage configuration
- * Provides CRUD operations for cloud storage settings (GCS/S3)
+ * Uses TanStack Query for caching. Handles 404 gracefully (no config = null).
  */
 export const useStorageConfig = (
   networkClient: NetworkClient,
   baseUrl: string,
-  testMode: boolean = false
+  entitySlug: string | null,
+  token: FirebaseIdToken | null,
+  options?: {
+    testMode?: boolean;
+    enabled?: boolean;
+  }
 ): UseStorageConfigReturn => {
+  const testMode = options?.testMode ?? false;
+  const enabled = (options?.enabled ?? true) && !!entitySlug && !!token;
+
   const client = useMemo(
     () => new ShapeshyftClient({ baseUrl, networkClient, testMode }),
     [baseUrl, networkClient, testMode]
   );
 
-  const [storageConfig, setStorageConfig] =
-    useState<EntityStorageConfig | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Optional<string>>(null);
+  const queryClient = useQueryClient();
 
-  /**
-   * Refresh storage config
-   */
-  const refresh = useCallback(
-    async (entitySlug: string, token: FirebaseIdToken): Promise<void> => {
-      setIsLoading(true);
-      setError(null);
-
+  const {
+    data,
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useQuery({
+    queryKey: QUERY_KEYS.storageConfig(entitySlug ?? ''),
+    queryFn: async (): Promise<EntityStorageConfig | null> => {
       try {
-        const response = await client.getStorageConfig(entitySlug, token);
+        const response = await client.getStorageConfig(entitySlug!, token!);
         if (response.success && response.data) {
-          setStorageConfig(response.data);
-        } else {
-          // 404 is expected if no config exists
-          setStorageConfig(null);
-          if (response.error && !response.error.includes('not found')) {
-            setError(response.error);
-          }
+          return response.data;
         }
-      } catch (err) {
         // 404 is expected if no config exists
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to fetch storage config';
+        if (response.error?.includes('not found')) {
+          return null;
+        }
+        if (response.error) {
+          throw new Error(response.error);
+        }
+        return null;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : '';
+        // 404 is expected if no config exists
         if (
           errorMessage.includes('not found') ||
           errorMessage.includes('404')
         ) {
-          setStorageConfig(null);
-        } else {
-          setError(errorMessage);
-          console.error('[useStorageConfig] refresh error:', errorMessage, err);
+          return null;
         }
-      } finally {
-        setIsLoading(false);
+        throw err;
       }
     },
-    [client]
-  );
+    enabled,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
 
-  /**
-   * Create or update storage config (upsert)
-   */
+  const createOrUpdateMutation = useMutation({
+    mutationFn: async (createData: StorageConfigCreateRequest) => {
+      return client.createStorageConfig(entitySlug!, createData, token!);
+    },
+    onSuccess: response => {
+      if (response.success && response.data && entitySlug) {
+        queryClient.setQueryData(
+          QUERY_KEYS.storageConfig(entitySlug),
+          response.data
+        );
+      }
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (updateData: StorageConfigUpdateRequest) => {
+      return client.updateStorageConfig(entitySlug!, updateData, token!);
+    },
+    onSuccess: response => {
+      if (response.success && response.data && entitySlug) {
+        queryClient.setQueryData(
+          QUERY_KEYS.storageConfig(entitySlug),
+          response.data
+        );
+      }
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      return client.deleteStorageConfig(entitySlug!, token!);
+    },
+    onSuccess: response => {
+      if (response.success && entitySlug) {
+        queryClient.setQueryData(QUERY_KEYS.storageConfig(entitySlug), null);
+      }
+    },
+  });
+
   const createOrUpdate = useCallback(
-    async (
-      entitySlug: string,
-      data: StorageConfigCreateRequest,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<EntityStorageConfig>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.createStorageConfig(
-          entitySlug,
-          data,
-          token
-        );
-        if (response.success && response.data) {
-          setStorageConfig(response.data);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : 'Failed to create/update storage config';
-        setError(errorMessage);
-        console.error(
-          '[useStorageConfig] createOrUpdate error:',
-          errorMessage,
-          err
-        );
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client]
+    (createData: StorageConfigCreateRequest) =>
+      createOrUpdateMutation.mutateAsync(createData),
+    [createOrUpdateMutation]
   );
 
-  /**
-   * Update storage config (partial update)
-   */
   const update = useCallback(
-    async (
-      entitySlug: string,
-      data: StorageConfigUpdateRequest,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<EntityStorageConfig>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.updateStorageConfig(
-          entitySlug,
-          data,
-          token
-        );
-        if (response.success && response.data) {
-          setStorageConfig(response.data);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : 'Failed to update storage config';
-        setError(errorMessage);
-        console.error('[useStorageConfig] update error:', errorMessage, err);
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client]
+    (updateData: StorageConfigUpdateRequest) =>
+      updateMutation.mutateAsync(updateData),
+    [updateMutation]
   );
 
-  /**
-   * Delete storage config
-   */
   const deleteConfig = useCallback(
-    async (
-      entitySlug: string,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<EntityStorageConfig>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.deleteStorageConfig(entitySlug, token);
-        if (response.success) {
-          setStorageConfig(null);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : 'Failed to delete storage config';
-        setError(errorMessage);
-        console.error(
-          '[useStorageConfig] deleteConfig error:',
-          errorMessage,
-          err
-        );
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client]
+    () => deleteMutation.mutateAsync(),
+    [deleteMutation]
   );
+
+  const storageConfig = data ?? null;
+
+  const mutationError =
+    createOrUpdateMutation.error ??
+    updateMutation.error ??
+    deleteMutation.error;
+  const error =
+    queryError instanceof Error
+      ? queryError.message
+      : mutationError instanceof Error
+        ? mutationError.message
+        : null;
 
   const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+    createOrUpdateMutation.reset();
+    updateMutation.reset();
+    deleteMutation.reset();
+  }, [createOrUpdateMutation, updateMutation, deleteMutation]);
 
   const reset = useCallback(() => {
-    setStorageConfig(null);
-    setError(null);
-    setIsLoading(false);
-  }, []);
-
-  const hasConfig = storageConfig !== null;
+    if (entitySlug) {
+      queryClient.removeQueries({
+        queryKey: QUERY_KEYS.storageConfig(entitySlug),
+      });
+    }
+    clearError();
+  }, [queryClient, entitySlug, clearError]);
 
   return useMemo(
     () => ({
       storageConfig,
-      isLoading,
+      isLoading:
+        isLoading ||
+        createOrUpdateMutation.isPending ||
+        updateMutation.isPending ||
+        deleteMutation.isPending,
       error,
-      hasConfig,
-      refresh,
+      hasConfig: storageConfig !== null,
+      refetch,
       createOrUpdate,
       update,
       deleteConfig,
@@ -252,9 +200,11 @@ export const useStorageConfig = (
     [
       storageConfig,
       isLoading,
+      createOrUpdateMutation.isPending,
+      updateMutation.isPending,
+      deleteMutation.isPending,
       error,
-      hasConfig,
-      refresh,
+      refetch,
       createOrUpdate,
       update,
       deleteConfig,

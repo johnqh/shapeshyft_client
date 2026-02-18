@@ -1,30 +1,38 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import type { NetworkClient } from '@sudobility/shapeshyft_types';
+import React from 'react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { renderHook, act, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MockNetworkClient } from '@sudobility/di/mocks';
 import { useAiExecute } from './useAiExecute';
-
-// Mock NetworkClient
-function createMockNetworkClient(): NetworkClient {
-  return {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-  };
-}
 
 describe('useAiExecute', () => {
   const baseUrl = 'https://api.example.com';
-  let mockNetworkClient: NetworkClient;
+  let mockNetworkClient: MockNetworkClient;
+  let queryClient: QueryClient;
 
   beforeEach(() => {
-    mockNetworkClient = createMockNetworkClient();
-    vi.clearAllMocks();
+    mockNetworkClient = new MockNetworkClient();
+    mockNetworkClient.setDefaultResponse({
+      ok: true,
+      data: { success: true, data: {} },
+    });
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
   });
 
+  const createWrapper = () => {
+    return ({ children }: { children: React.ReactNode }) =>
+      React.createElement(QueryClientProvider, { client: queryClient }, children);
+  };
+
   it('should initialize with empty state', () => {
-    const { result } = renderHook(() =>
-      useAiExecute(mockNetworkClient, baseUrl)
+    const { result } = renderHook(
+      () => useAiExecute(mockNetworkClient, baseUrl),
+      { wrapper: createWrapper() }
     );
 
     expect(result.current.result).toBeNull();
@@ -43,13 +51,15 @@ describe('useAiExecute', () => {
           estimated_cost_cents: 1,
         },
       };
-      vi.mocked(mockNetworkClient.post).mockResolvedValue({
-        ok: true,
-        data: { success: true, data: mockResponse },
-      });
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/ai/my-org/my-project/summarize`,
+        { ok: true, data: { success: true, data: mockResponse } },
+        'POST'
+      );
 
-      const { result } = renderHook(() =>
-        useAiExecute(mockNetworkClient, baseUrl)
+      const { result } = renderHook(
+        () => useAiExecute(mockNetworkClient, baseUrl),
+        { wrapper: createWrapper() }
       );
 
       await act(async () => {
@@ -58,20 +68,30 @@ describe('useAiExecute', () => {
         });
       });
 
-      expect(mockNetworkClient.post).toHaveBeenCalled();
-      expect(result.current.result).toEqual(mockResponse);
+      await waitFor(() => {
+        expect(result.current.result).toEqual(mockResponse);
+      });
+
+      expect(
+        mockNetworkClient.wasUrlCalled(
+          `${baseUrl}/api/v1/ai/my-org/my-project/summarize`,
+          'POST'
+        )
+      ).toBe(true);
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBeNull();
     });
 
     it('should execute AI endpoint via GET when specified', async () => {
-      vi.mocked(mockNetworkClient.get).mockResolvedValue({
-        ok: true,
-        data: { success: true, data: { output: {} } },
-      });
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/ai/my-org/my-project/endpoint?input=%7B%7D`,
+        { ok: true, data: { success: true, data: { output: {} } } },
+        'GET'
+      );
 
-      const { result } = renderHook(() =>
-        useAiExecute(mockNetworkClient, baseUrl)
+      const { result } = renderHook(
+        () => useAiExecute(mockNetworkClient, baseUrl),
+        { wrapper: createWrapper() }
       );
 
       await act(async () => {
@@ -84,118 +104,168 @@ describe('useAiExecute', () => {
         );
       });
 
-      expect(mockNetworkClient.get).toHaveBeenCalled();
-      expect(mockNetworkClient.post).not.toHaveBeenCalled();
+      expect(
+        mockNetworkClient.wasUrlCalled(
+          `${baseUrl}/api/v1/ai/my-org/my-project/endpoint?input=%7B%7D`,
+          'GET'
+        )
+      ).toBe(true);
+      expect(
+        mockNetworkClient.wasUrlCalled(
+          `${baseUrl}/api/v1/ai/my-org/my-project/endpoint`,
+          'POST'
+        )
+      ).toBe(false);
     });
 
     it('should set error on failed execution', async () => {
-      vi.mocked(mockNetworkClient.post).mockResolvedValue({
-        ok: false,
-        data: { success: false, error: 'Endpoint not found' },
-      });
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/ai/org/project/endpoint`,
+        { ok: false, data: { success: false, error: 'Endpoint not found' } },
+        'POST'
+      );
 
-      const { result } = renderHook(() =>
-        useAiExecute(mockNetworkClient, baseUrl)
+      const { result } = renderHook(
+        () => useAiExecute(mockNetworkClient, baseUrl),
+        { wrapper: createWrapper() }
       );
 
       await act(async () => {
-        await result.current.execute('org', 'project', 'endpoint', {});
+        try {
+          await result.current.execute('org', 'project', 'endpoint', {});
+        } catch {
+          // expected - mutateAsync rethrows
+        }
       });
 
-      expect(result.current.error).toBeTruthy();
+      await waitFor(() => {
+        expect(result.current.error).toBeTruthy();
+      });
+
       expect(result.current.result).toBeNull();
     });
 
     it('should handle network errors', async () => {
-      vi.mocked(mockNetworkClient.post).mockRejectedValue(
-        new Error('Network error')
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/ai/org/project/endpoint`,
+        { error: new Error('Network error') },
+        'POST'
       );
 
-      const { result } = renderHook(() =>
-        useAiExecute(mockNetworkClient, baseUrl)
+      const { result } = renderHook(
+        () => useAiExecute(mockNetworkClient, baseUrl),
+        { wrapper: createWrapper() }
       );
 
       await act(async () => {
-        await result.current.execute('org', 'project', 'endpoint', {});
+        try {
+          await result.current.execute('org', 'project', 'endpoint', {});
+        } catch {
+          // expected - mutateAsync rethrows
+        }
       });
 
-      expect(result.current.error).toBe('Network error');
+      await waitFor(() => {
+        expect(result.current.error).toBe('Network error');
+      });
     });
 
     it('should set isLoading during execution', async () => {
-      let resolvePromise: (value: unknown) => void;
-      const promise = new Promise(resolve => {
-        resolvePromise = resolve;
-      });
-      vi.mocked(mockNetworkClient.post).mockReturnValue(promise as never);
-
-      const { result } = renderHook(() =>
-        useAiExecute(mockNetworkClient, baseUrl)
+      // Use a delayed response to observe loading state
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/ai/org/project/endpoint`,
+        { ok: true, data: { success: true, data: {} }, delay: 100 },
+        'POST'
       );
 
+      const { result } = renderHook(
+        () => useAiExecute(mockNetworkClient, baseUrl),
+        { wrapper: createWrapper() }
+      );
+
+      let executePromise: Promise<unknown>;
       act(() => {
-        result.current.execute('org', 'project', 'endpoint', {});
+        executePromise = result.current.execute('org', 'project', 'endpoint', {});
       });
 
-      expect(result.current.isLoading).toBe(true);
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(true);
+      });
 
       await act(async () => {
-        resolvePromise!({
-          ok: true,
-          data: { success: true, data: {} },
-        });
+        await executePromise!;
       });
 
-      expect(result.current.isLoading).toBe(false);
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
     });
   });
 
   describe('clearError', () => {
     it('should clear the error state', async () => {
-      vi.mocked(mockNetworkClient.post).mockRejectedValue(
-        new Error('Test error')
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/ai/org/project/endpoint`,
+        { error: new Error('Test error') },
+        'POST'
       );
 
-      const { result } = renderHook(() =>
-        useAiExecute(mockNetworkClient, baseUrl)
+      const { result } = renderHook(
+        () => useAiExecute(mockNetworkClient, baseUrl),
+        { wrapper: createWrapper() }
       );
 
       await act(async () => {
-        await result.current.execute('org', 'project', 'endpoint', {});
+        try {
+          await result.current.execute('org', 'project', 'endpoint', {});
+        } catch {
+          // expected
+        }
       });
 
-      expect(result.current.error).toBeTruthy();
+      await waitFor(() => {
+        expect(result.current.error).toBeTruthy();
+      });
 
       act(() => {
         result.current.clearError();
       });
 
-      expect(result.current.error).toBeNull();
+      await waitFor(() => {
+        expect(result.current.error).toBeNull();
+      });
     });
   });
 
   describe('reset', () => {
     it('should reset all state to initial values', async () => {
-      vi.mocked(mockNetworkClient.post).mockResolvedValue({
-        ok: true,
-        data: { success: true, data: { output: 'test' } },
-      });
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/ai/org/project/endpoint`,
+        { ok: true, data: { success: true, data: { output: 'test' } } },
+        'POST'
+      );
 
-      const { result } = renderHook(() =>
-        useAiExecute(mockNetworkClient, baseUrl)
+      const { result } = renderHook(
+        () => useAiExecute(mockNetworkClient, baseUrl),
+        { wrapper: createWrapper() }
       );
 
       await act(async () => {
         await result.current.execute('org', 'project', 'endpoint', {});
       });
 
-      expect(result.current.result).not.toBeNull();
+      await waitFor(() => {
+        expect(result.current.result).not.toBeNull();
+      });
 
       act(() => {
         result.current.reset();
       });
 
-      expect(result.current.result).toBeNull();
+      await waitFor(() => {
+        expect(result.current.result).toBeNull();
+      });
+
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBeNull();
     });

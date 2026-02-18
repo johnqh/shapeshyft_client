@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   BaseResponse,
   NetworkClient,
@@ -8,6 +9,7 @@ import type {
 } from '@sudobility/shapeshyft_types';
 import type { FirebaseIdToken } from '../types';
 import { ShapeshyftClient } from '../network/ShapeshyftClient';
+import { QUERY_KEYS } from '../types';
 
 /**
  * Return type for useSettings hook
@@ -17,11 +19,9 @@ export interface UseSettingsReturn {
   isLoading: boolean;
   error: Optional<string>;
 
-  refresh: (userId: string, token: FirebaseIdToken) => Promise<void>;
+  refetch: () => void;
   updateSettings: (
-    userId: string,
-    data: UserSettingsUpdateRequest,
-    token: FirebaseIdToken
+    data: UserSettingsUpdateRequest
   ) => Promise<BaseResponse<UserSettings>>;
 
   clearError: () => void;
@@ -30,104 +30,102 @@ export interface UseSettingsReturn {
 
 /**
  * Hook for managing user settings
- * Provides get and update operations
+ * Uses TanStack Query for caching
  */
 export const useSettings = (
   networkClient: NetworkClient,
   baseUrl: string,
-  testMode: boolean = false
+  userId: string | null,
+  token: FirebaseIdToken | null,
+  options?: {
+    testMode?: boolean;
+    enabled?: boolean;
+  }
 ): UseSettingsReturn => {
+  const testMode = options?.testMode ?? false;
+  const enabled = (options?.enabled ?? true) && !!userId && !!token;
+
   const client = useMemo(
     () => new ShapeshyftClient({ baseUrl, networkClient, testMode }),
     [baseUrl, networkClient, testMode]
   );
 
-  const [settings, setSettings] = useState<Optional<UserSettings>>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Optional<string>>(null);
+  const queryClient = useQueryClient();
 
-  /**
-   * Refresh settings
-   */
-  const refresh = useCallback(
-    async (userId: string, token: FirebaseIdToken): Promise<void> => {
-      setIsLoading(true);
-      setError(null);
+  const {
+    data,
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useQuery({
+    queryKey: QUERY_KEYS.settings(userId ?? ''),
+    queryFn: async () => {
+      const response = await client.getSettings(userId!, token!);
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to fetch settings');
+      }
+      return response.data;
+    },
+    enabled,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
 
-      try {
-        const response = await client.getSettings(userId, token);
-        if (response.success && response.data) {
-          setSettings(response.data);
-        } else {
-          setError(response.error || 'Failed to fetch settings');
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to fetch settings';
-        setError(errorMessage);
-        console.error('[useSettings] refresh error:', errorMessage, err);
-      } finally {
-        setIsLoading(false);
+  const updateMutation = useMutation({
+    mutationFn: async (updateData: UserSettingsUpdateRequest) => {
+      return client.updateSettings(userId!, updateData, token!);
+    },
+    onSuccess: response => {
+      if (response.success && response.data && userId) {
+        // Directly update the cache with the response data
+        queryClient.setQueryData(QUERY_KEYS.settings(userId), response.data);
       }
     },
-    [client]
-  );
+  });
 
-  /**
-   * Update settings
-   */
   const updateSettings = useCallback(
-    async (
-      userId: string,
-      data: UserSettingsUpdateRequest,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<UserSettings>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.updateSettings(userId, data, token);
-        if (response.success && response.data) {
-          setSettings(response.data);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to update settings';
-        setError(errorMessage);
-        console.error('[useSettings] updateSettings error:', errorMessage, err);
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client]
+    (data: UserSettingsUpdateRequest) => updateMutation.mutateAsync(data),
+    [updateMutation]
   );
+
+  const mutationError = updateMutation.error;
+  const error =
+    queryError instanceof Error
+      ? queryError.message
+      : mutationError instanceof Error
+        ? mutationError.message
+        : null;
 
   const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+    updateMutation.reset();
+  }, [updateMutation]);
 
   const reset = useCallback(() => {
-    setSettings(null);
-    setError(null);
-    setIsLoading(false);
-  }, []);
+    if (userId) {
+      queryClient.removeQueries({ queryKey: QUERY_KEYS.settings(userId) });
+    }
+    clearError();
+  }, [queryClient, userId, clearError]);
 
   return useMemo(
     () => ({
-      settings,
-      isLoading,
+      settings: data ?? null,
+      isLoading: isLoading || updateMutation.isPending,
       error,
-      refresh,
+      refetch,
       updateSettings,
       clearError,
       reset,
     }),
-    [settings, isLoading, error, refresh, updateSettings, clearError, reset]
+    [
+      data,
+      isLoading,
+      updateMutation.isPending,
+      error,
+      refetch,
+      updateSettings,
+      clearError,
+      reset,
+    ]
   );
 };

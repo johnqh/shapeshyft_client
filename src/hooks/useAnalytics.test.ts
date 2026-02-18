@@ -1,24 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import type {
-  NetworkClient,
-  AnalyticsResponse,
-} from '@sudobility/shapeshyft_types';
+import React from 'react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { renderHook, act, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MockNetworkClient } from '@sudobility/di/mocks';
+import type { AnalyticsResponse } from '@sudobility/shapeshyft_types';
 import { useAnalytics } from './useAnalytics';
-
-// Mock NetworkClient
-function createMockNetworkClient(): NetworkClient {
-  return {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-  };
-}
 
 describe('useAnalytics', () => {
   const baseUrl = 'https://api.example.com';
-  let mockNetworkClient: NetworkClient;
+  const userId = 'user-123';
+  const token = 'test-token';
+  let mockNetworkClient: MockNetworkClient;
+  let queryClient: QueryClient;
 
   const mockAnalyticsData: AnalyticsResponse = {
     summary: {
@@ -50,13 +43,28 @@ describe('useAnalytics', () => {
   };
 
   beforeEach(() => {
-    mockNetworkClient = createMockNetworkClient();
-    vi.clearAllMocks();
+    mockNetworkClient = new MockNetworkClient();
+    mockNetworkClient.setDefaultResponse({
+      ok: true,
+      data: { success: true, data: null },
+    });
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
   });
 
+  const createWrapper = () => {
+    return ({ children }: { children: React.ReactNode }) =>
+      React.createElement(QueryClientProvider, { client: queryClient }, children);
+  };
+
   it('should initialize with empty state', () => {
-    const { result } = renderHook(() =>
-      useAnalytics(mockNetworkClient, baseUrl)
+    const { result } = renderHook(
+      () => useAnalytics(mockNetworkClient, baseUrl, null, null),
+      { wrapper: createWrapper() }
     );
 
     expect(result.current.analytics).toBeNull();
@@ -64,174 +72,174 @@ describe('useAnalytics', () => {
     expect(result.current.error).toBeNull();
   });
 
-  describe('refresh', () => {
+  describe('auto-fetch', () => {
     it('should fetch analytics and update state', async () => {
-      vi.mocked(mockNetworkClient.get).mockResolvedValue({
-        ok: true,
-        data: { success: true, data: mockAnalyticsData },
-      });
-
-      const { result } = renderHook(() =>
-        useAnalytics(mockNetworkClient, baseUrl)
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/analytics`,
+        { ok: true, data: { success: true, data: mockAnalyticsData } },
+        'GET'
       );
 
-      await act(async () => {
-        await result.current.refresh('user-123', 'token');
+      const { result } = renderHook(
+        () => useAnalytics(mockNetworkClient, baseUrl, userId, token),
+        { wrapper: createWrapper() }
+      );
+
+      await waitFor(() => {
+        expect(result.current.analytics).toEqual(mockAnalyticsData);
       });
 
-      expect(result.current.analytics).toEqual(mockAnalyticsData);
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBeNull();
     });
 
     it('should fetch analytics with query params', async () => {
-      vi.mocked(mockNetworkClient.get).mockResolvedValue({
-        ok: true,
-        data: { success: true, data: mockAnalyticsData },
-      });
-
-      const { result } = renderHook(() =>
-        useAnalytics(mockNetworkClient, baseUrl)
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/analytics?start_date=2024-01-01&end_date=2024-01-31`,
+        { ok: true, data: { success: true, data: mockAnalyticsData } },
+        'GET'
       );
 
-      await act(async () => {
-        await result.current.refresh('user-123', 'token', {
-          start_date: '2024-01-01',
-          end_date: '2024-01-31',
-        });
+      const { result } = renderHook(
+        () =>
+          useAnalytics(mockNetworkClient, baseUrl, userId, token, {
+            params: {
+              start_date: '2024-01-01',
+              end_date: '2024-01-31',
+            },
+          }),
+        { wrapper: createWrapper() }
+      );
+
+      await waitFor(() => {
+        expect(result.current.analytics).toEqual(mockAnalyticsData);
       });
 
-      expect(mockNetworkClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('start_date=2024-01-01'),
-        expect.any(Object)
-      );
+      expect(
+        mockNetworkClient.wasUrlCalled(
+          `${baseUrl}/api/v1/users/${userId}/analytics?start_date=2024-01-01&end_date=2024-01-31`,
+          'GET'
+        )
+      ).toBe(true);
     });
 
     it('should set error on failed request', async () => {
-      vi.mocked(mockNetworkClient.get).mockResolvedValue({
-        ok: false,
-        data: { success: false, error: 'Unauthorized' },
-      });
-
-      const { result } = renderHook(() =>
-        useAnalytics(mockNetworkClient, baseUrl)
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/analytics`,
+        { ok: false, data: { success: false, error: 'Unauthorized' } },
+        'GET'
       );
 
-      await act(async () => {
-        await result.current.refresh('user-123', 'token');
+      const { result } = renderHook(
+        () => useAnalytics(mockNetworkClient, baseUrl, userId, token),
+        { wrapper: createWrapper() }
+      );
+
+      await waitFor(() => {
+        expect(result.current.error).toBeTruthy();
       });
 
       expect(result.current.analytics).toBeNull();
-      expect(result.current.error).toBeTruthy();
     });
 
     it('should set isLoading during request', async () => {
-      let resolvePromise: (value: unknown) => void;
-      const promise = new Promise(resolve => {
-        resolvePromise = resolve;
-      });
-      vi.mocked(mockNetworkClient.get).mockReturnValue(promise as never);
-
-      const { result } = renderHook(() =>
-        useAnalytics(mockNetworkClient, baseUrl)
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/analytics`,
+        { ok: true, data: { success: true, data: mockAnalyticsData }, delay: 100 },
+        'GET'
       );
 
-      act(() => {
-        result.current.refresh('user-123', 'token');
-      });
+      const { result } = renderHook(
+        () => useAnalytics(mockNetworkClient, baseUrl, userId, token),
+        { wrapper: createWrapper() }
+      );
 
       expect(result.current.isLoading).toBe(true);
 
-      await act(async () => {
-        resolvePromise!({
-          ok: true,
-          data: { success: true, data: mockAnalyticsData },
-        });
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
       });
-
-      expect(result.current.isLoading).toBe(false);
     });
 
     it('should handle network errors', async () => {
-      vi.mocked(mockNetworkClient.get).mockRejectedValue(
-        new Error('Network error')
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/analytics`,
+        { error: new Error('Network error') },
+        'GET'
       );
 
-      const { result } = renderHook(() =>
-        useAnalytics(mockNetworkClient, baseUrl)
+      const { result } = renderHook(
+        () => useAnalytics(mockNetworkClient, baseUrl, userId, token),
+        { wrapper: createWrapper() }
       );
 
-      await act(async () => {
-        await result.current.refresh('user-123', 'token');
+      await waitFor(() => {
+        expect(result.current.error).toBe('Network error');
       });
-
-      expect(result.current.error).toBe('Network error');
     });
 
     it('should handle response without data', async () => {
-      vi.mocked(mockNetworkClient.get).mockResolvedValue({
-        ok: true,
-        data: { success: true },
-      });
-
-      const { result } = renderHook(() =>
-        useAnalytics(mockNetworkClient, baseUrl)
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/analytics`,
+        { ok: true, data: { success: true } },
+        'GET'
       );
 
-      await act(async () => {
-        await result.current.refresh('user-123', 'token');
-      });
-
-      expect(result.current.error).toBe('Failed to fetch analytics');
-    });
-  });
-
-  describe('clearError', () => {
-    it('should clear the error state', async () => {
-      vi.mocked(mockNetworkClient.get).mockRejectedValue(
-        new Error('Network error')
+      const { result } = renderHook(
+        () => useAnalytics(mockNetworkClient, baseUrl, userId, token),
+        { wrapper: createWrapper() }
       );
 
-      const { result } = renderHook(() =>
-        useAnalytics(mockNetworkClient, baseUrl)
-      );
-
-      await act(async () => {
-        await result.current.refresh('user-123', 'token');
+      await waitFor(() => {
+        expect(result.current.error).toBe('Failed to fetch analytics');
       });
-
-      expect(result.current.error).toBe('Network error');
-
-      act(() => {
-        result.current.clearError();
-      });
-
-      expect(result.current.error).toBeNull();
     });
   });
 
   describe('reset', () => {
     it('should reset all state', async () => {
-      vi.mocked(mockNetworkClient.get).mockResolvedValue({
-        ok: true,
-        data: { success: true, data: mockAnalyticsData },
-      });
-
-      const { result } = renderHook(() =>
-        useAnalytics(mockNetworkClient, baseUrl)
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/analytics`,
+        { ok: true, data: { success: true, data: mockAnalyticsData } },
+        'GET'
       );
 
-      await act(async () => {
-        await result.current.refresh('user-123', 'token');
+      const { result } = renderHook(
+        () => useAnalytics(mockNetworkClient, baseUrl, userId, token),
+        { wrapper: createWrapper() }
+      );
+
+      await waitFor(() => {
+        expect(result.current.analytics).toEqual(mockAnalyticsData);
       });
 
-      expect(result.current.analytics).toEqual(mockAnalyticsData);
+      // Update mock to return different data so re-fetch after reset gets new data
+      const emptyAnalytics: AnalyticsResponse = {
+        summary: {
+          total_requests: 0,
+          total_tokens_input: 0,
+          total_tokens_output: 0,
+          total_cost_usd: 0,
+          average_latency_ms: 0,
+        },
+        by_endpoint: [],
+        by_date: [],
+      };
+      mockNetworkClient.setMockResponse(
+        `${baseUrl}/api/v1/users/${userId}/analytics`,
+        { ok: true, data: { success: true, data: emptyAnalytics } },
+        'GET'
+      );
 
       act(() => {
         result.current.reset();
       });
 
-      expect(result.current.analytics).toBeNull();
+      // After reset + re-fetch, data is replaced with new response
+      await waitFor(() => {
+        expect(result.current.analytics).toEqual(emptyAnalytics);
+      });
+
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBeNull();
     });
@@ -239,17 +247,18 @@ describe('useAnalytics', () => {
 
   describe('memoization', () => {
     it('should return stable callback references', () => {
-      const { result, rerender } = renderHook(() =>
-        useAnalytics(mockNetworkClient, baseUrl)
+      const { result, rerender } = renderHook(
+        () => useAnalytics(mockNetworkClient, baseUrl, null, null),
+        { wrapper: createWrapper() }
       );
 
-      const firstRefresh = result.current.refresh;
+      const firstRefetch = result.current.refetch;
       const firstClearError = result.current.clearError;
       const firstReset = result.current.reset;
 
       rerender();
 
-      expect(result.current.refresh).toBe(firstRefresh);
+      expect(result.current.refetch).toBe(firstRefetch);
       expect(result.current.clearError).toBe(firstClearError);
       expect(result.current.reset).toBe(firstReset);
     });

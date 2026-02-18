@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   BaseResponse,
   GetApiKeyResponse,
@@ -12,6 +13,10 @@ import type {
 } from '@sudobility/shapeshyft_types';
 import type { FirebaseIdToken } from '../types';
 import { ShapeshyftClient } from '../network/ShapeshyftClient';
+import { QUERY_KEYS } from '../types';
+
+// Stable empty array to prevent unnecessary re-renders
+const EMPTY_PROJECTS: Project[] = [];
 
 /**
  * Return type for useProjects hook
@@ -21,41 +26,19 @@ export interface UseProjectsReturn {
   isLoading: boolean;
   error: Optional<string>;
 
-  refresh: (
-    entitySlug: string,
-    token: FirebaseIdToken,
-    params?: ProjectQueryParams
-  ) => Promise<void>;
-  getProject: (
-    entitySlug: string,
-    projectId: string,
-    token: FirebaseIdToken
-  ) => Promise<BaseResponse<Project>>;
-  createProject: (
-    entitySlug: string,
-    data: ProjectCreateRequest,
-    token: FirebaseIdToken
-  ) => Promise<BaseResponse<Project>>;
+  refetch: () => void;
+  getProject: (projectId: string) => Promise<BaseResponse<Project>>;
+  createProject: (data: ProjectCreateRequest) => Promise<BaseResponse<Project>>;
   updateProject: (
-    entitySlug: string,
     projectId: string,
-    data: ProjectUpdateRequest,
-    token: FirebaseIdToken
+    data: ProjectUpdateRequest
   ) => Promise<BaseResponse<Project>>;
-  deleteProject: (
-    entitySlug: string,
-    projectId: string,
-    token: FirebaseIdToken
-  ) => Promise<BaseResponse<Project>>;
+  deleteProject: (projectId: string) => Promise<BaseResponse<Project>>;
   getProjectApiKey: (
-    entitySlug: string,
-    projectId: string,
-    token: FirebaseIdToken
+    projectId: string
   ) => Promise<BaseResponse<GetApiKeyResponse>>;
   refreshProjectApiKey: (
-    entitySlug: string,
-    projectId: string,
-    token: FirebaseIdToken
+    projectId: string
   ) => Promise<BaseResponse<RefreshApiKeyResponse>>;
 
   clearError: () => void;
@@ -64,306 +47,194 @@ export interface UseProjectsReturn {
 
 /**
  * Hook for managing projects
- * Provides CRUD operations with automatic refresh after mutations
+ * Uses TanStack Query for caching with automatic refresh after mutations
  */
 export const useProjects = (
   networkClient: NetworkClient,
   baseUrl: string,
-  testMode: boolean = false
+  entitySlug: string | null,
+  token: FirebaseIdToken | null,
+  options?: {
+    testMode?: boolean;
+    enabled?: boolean;
+    params?: ProjectQueryParams;
+  }
 ): UseProjectsReturn => {
+  const testMode = options?.testMode ?? false;
+  const enabled = (options?.enabled ?? true) && !!entitySlug && !!token;
+
   const client = useMemo(
     () => new ShapeshyftClient({ baseUrl, networkClient, testMode }),
     [baseUrl, networkClient, testMode]
   );
 
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Optional<string>>(null);
+  const queryClient = useQueryClient();
 
-  // Store last params for refresh after mutations
-  const [lastParams, setLastParams] =
-    useState<Optional<ProjectQueryParams>>(null);
-
-  /**
-   * Refresh projects list
-   */
-  const refresh = useCallback(
-    async (
-      entitySlug: string,
-      token: FirebaseIdToken,
-      params?: ProjectQueryParams
-    ): Promise<void> => {
-      setIsLoading(true);
-      setError(null);
-      setLastParams(params);
-
-      try {
-        const response = await client.getProjects(entitySlug, token, params);
-        if (response.success && response.data) {
-          setProjects(response.data);
-        } else {
-          setError(response.error || 'Failed to fetch projects');
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to fetch projects';
-        setError(errorMessage);
-        console.error('[useProjects] refresh error:', errorMessage, err);
-      } finally {
-        setIsLoading(false);
+  const {
+    data,
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useQuery({
+    queryKey: QUERY_KEYS.projects(entitySlug ?? ''),
+    queryFn: async () => {
+      const response = await client.getProjects(
+        entitySlug!,
+        token!,
+        options?.params
+      );
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to fetch projects');
       }
+      return response.data;
     },
-    [client]
-  );
+    enabled,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
 
-  /**
-   * Get a single project
-   */
+  const invalidateProjects = useCallback(() => {
+    if (entitySlug) {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.projects(entitySlug),
+      });
+    }
+  }, [queryClient, entitySlug]);
+
+  const createMutation = useMutation({
+    mutationFn: async (data: ProjectCreateRequest) => {
+      return client.createProject(entitySlug!, data, token!);
+    },
+    onSuccess: response => {
+      if (response.success) invalidateProjects();
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({
+      projectId,
+      data,
+    }: {
+      projectId: string;
+      data: ProjectUpdateRequest;
+    }) => {
+      return client.updateProject(entitySlug!, projectId, data, token!);
+    },
+    onSuccess: response => {
+      if (response.success) invalidateProjects();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (projectId: string) => {
+      return client.deleteProject(entitySlug!, projectId, token!);
+    },
+    onSuccess: response => {
+      if (response.success) invalidateProjects();
+    },
+  });
+
+  const refreshApiKeyMutation = useMutation({
+    mutationFn: async (projectId: string) => {
+      return client.refreshProjectApiKey(entitySlug!, projectId, token!);
+    },
+    onSuccess: response => {
+      if (response.success) invalidateProjects();
+    },
+  });
+
   const getProject = useCallback(
-    async (
-      entitySlug: string,
-      projectId: string,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<Project>> => {
-      setIsLoading(true);
-      setError(null);
-
+    async (projectId: string): Promise<BaseResponse<Project>> => {
       try {
-        const response = await client.getProject(entitySlug, projectId, token);
-        return response;
+        return await client.getProject(entitySlug!, projectId, token!);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to get project';
-        setError(errorMessage);
-        console.error('[useProjects] getProject error:', errorMessage, err);
         return {
           success: false,
           error: errorMessage,
           timestamp: new Date().toISOString(),
         };
-      } finally {
-        setIsLoading(false);
       }
     },
-    [client]
+    [client, entitySlug, token]
   );
 
-  /**
-   * Create a new project and refresh the list
-   */
-  const createProject = useCallback(
-    async (
-      entitySlug: string,
-      data: ProjectCreateRequest,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<Project>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.createProject(entitySlug, data, token);
-        if (response.success) {
-          await refresh(entitySlug, token, lastParams ?? undefined);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to create project';
-        setError(errorMessage);
-        console.error('[useProjects] createProject error:', errorMessage, err);
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client, refresh, lastParams]
-  );
-
-  /**
-   * Update a project and refresh the list
-   */
-  const updateProject = useCallback(
-    async (
-      entitySlug: string,
-      projectId: string,
-      data: ProjectUpdateRequest,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<Project>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.updateProject(
-          entitySlug,
-          projectId,
-          data,
-          token
-        );
-        if (response.success) {
-          await refresh(entitySlug, token, lastParams ?? undefined);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to update project';
-        setError(errorMessage);
-        console.error('[useProjects] updateProject error:', errorMessage, err);
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client, refresh, lastParams]
-  );
-
-  /**
-   * Delete a project and refresh the list
-   */
-  const deleteProject = useCallback(
-    async (
-      entitySlug: string,
-      projectId: string,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<Project>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.deleteProject(
-          entitySlug,
-          projectId,
-          token
-        );
-        if (response.success) {
-          await refresh(entitySlug, token, lastParams ?? undefined);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to delete project';
-        setError(errorMessage);
-        console.error('[useProjects] deleteProject error:', errorMessage, err);
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client, refresh, lastParams]
-  );
-
-  /**
-   * Get project API key (full key)
-   */
   const getProjectApiKey = useCallback(
-    async (
-      entitySlug: string,
-      projectId: string,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<GetApiKeyResponse>> => {
-      setIsLoading(true);
-      setError(null);
-
+    async (projectId: string): Promise<BaseResponse<GetApiKeyResponse>> => {
       try {
-        const response = await client.getProjectApiKey(
-          entitySlug,
-          projectId,
-          token
-        );
-        return response;
+        return await client.getProjectApiKey(entitySlug!, projectId, token!);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to get API key';
-        setError(errorMessage);
-        console.error(
-          '[useProjects] getProjectApiKey error:',
-          errorMessage,
-          err
-        );
         return {
           success: false,
           error: errorMessage,
           timestamp: new Date().toISOString(),
         };
-      } finally {
-        setIsLoading(false);
       }
     },
-    [client]
+    [client, entitySlug, token]
   );
 
-  /**
-   * Refresh project API key (generates new key)
-   */
+  const createProject = useCallback(
+    (data: ProjectCreateRequest) => createMutation.mutateAsync(data),
+    [createMutation]
+  );
+
+  const updateProject = useCallback(
+    (projectId: string, data: ProjectUpdateRequest) =>
+      updateMutation.mutateAsync({ projectId, data }),
+    [updateMutation]
+  );
+
+  const deleteProject = useCallback(
+    (projectId: string) => deleteMutation.mutateAsync(projectId),
+    [deleteMutation]
+  );
+
   const refreshProjectApiKey = useCallback(
-    async (
-      entitySlug: string,
-      projectId: string,
-      token: FirebaseIdToken
-    ): Promise<BaseResponse<RefreshApiKeyResponse>> => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await client.refreshProjectApiKey(
-          entitySlug,
-          projectId,
-          token
-        );
-        if (response.success) {
-          // Refresh projects list to get updated api_key_prefix
-          await refresh(entitySlug, token, lastParams ?? undefined);
-        }
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to refresh API key';
-        setError(errorMessage);
-        console.error(
-          '[useProjects] refreshProjectApiKey error:',
-          errorMessage,
-          err
-        );
-        return {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        };
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [client, refresh, lastParams]
+    (projectId: string) => refreshApiKeyMutation.mutateAsync(projectId),
+    [refreshApiKeyMutation]
   );
+
+  // Derive error from query or mutation state
+  const mutationError =
+    createMutation.error ??
+    updateMutation.error ??
+    deleteMutation.error ??
+    refreshApiKeyMutation.error;
+  const error =
+    queryError instanceof Error
+      ? queryError.message
+      : mutationError instanceof Error
+        ? mutationError.message
+        : null;
 
   const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+    createMutation.reset();
+    updateMutation.reset();
+    deleteMutation.reset();
+    refreshApiKeyMutation.reset();
+  }, [createMutation, updateMutation, deleteMutation, refreshApiKeyMutation]);
 
   const reset = useCallback(() => {
-    setProjects([]);
-    setError(null);
-    setIsLoading(false);
-    setLastParams(null);
-  }, []);
+    if (entitySlug) {
+      queryClient.removeQueries({ queryKey: QUERY_KEYS.projects(entitySlug) });
+    }
+    clearError();
+  }, [queryClient, entitySlug, clearError]);
 
   return useMemo(
     () => ({
-      projects,
-      isLoading,
+      projects: data ?? EMPTY_PROJECTS,
+      isLoading:
+        isLoading ||
+        createMutation.isPending ||
+        updateMutation.isPending ||
+        deleteMutation.isPending,
       error,
-      refresh,
+      refetch,
       getProject,
       createProject,
       updateProject,
@@ -374,10 +245,13 @@ export const useProjects = (
       reset,
     }),
     [
-      projects,
+      data,
       isLoading,
+      createMutation.isPending,
+      updateMutation.isPending,
+      deleteMutation.isPending,
       error,
-      refresh,
+      refetch,
       getProject,
       createProject,
       updateProject,
