@@ -150,3 +150,53 @@ Test coverage includes:
 - Error handling
 - Loading states
 - Callback memoization
+
+## Workspace Context
+
+This project is part of the **ShapeShyft** multi-project workspace at the parent directory. See `../CLAUDE.md` for the full architecture, dependency graph, and build order.
+
+## Downstream Impact
+
+| Downstream Consumer | Relationship |
+|---------------------|-------------|
+| `shapeshyft_lib` | Direct peer dependency - wraps these hooks with Zustand stores |
+| `shapeshyft_app` | Transitive via shapeshyft_lib |
+
+After making changes:
+1. Run checks (no `verify` script - see below)
+2. `npm publish`
+3. In `shapeshyft_lib`: `bun update @sudobility/shapeshyft_client` -> rebuild
+4. In `shapeshyft_app`: `bun update @sudobility/shapeshyft_client` -> rebuild
+
+## Local Dev Workflow
+
+```bash
+# In this project:
+bun link
+
+# In shapeshyft_lib:
+bun link @sudobility/shapeshyft_client
+
+# Rebuild after changes:
+bun run build
+
+# When done, unlink:
+bun unlink @sudobility/shapeshyft_client && bun install
+```
+
+## Pre-Commit Checklist
+
+No `verify` script. Run checks manually:
+
+```bash
+bun run typecheck && bun run lint && bun run test:run && bun run build
+```
+
+Note: `bun run test` starts watch mode. Use `bun run test:run` for single run.
+
+## Gotchas
+
+- **`publishConfig.access` is `"restricted"`** -- this is intentionally a private npm package.
+- **Hooks use `networkClient`, not direct fetch** -- all HTTP goes through a `NetworkClient` interface from `@sudobility/di`.
+- **Hooks return `{ data, isLoading, error, refresh, clearError, reset }` pattern** -- `shapeshyft_lib` manager hooks depend on this exact shape. Do not change it.
+- **`bun run test` starts watch mode** -- use `bun run test:run` for CI.
