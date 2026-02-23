@@ -60,7 +60,8 @@ export const useSettings = (
   } = useQuery({
     queryKey: QUERY_KEYS.settings(userId ?? ''),
     queryFn: async () => {
-      const response = await client.getSettings(userId!, token!);
+      if (!userId || !token) throw new Error('Missing required params');
+      const response = await client.getSettings(userId, token);
       if (!response.success || !response.data) {
         throw new Error(response.error || 'Failed to fetch settings');
       }
@@ -73,7 +74,8 @@ export const useSettings = (
 
   const updateMutation = useMutation({
     mutationFn: async (updateData: UserSettingsUpdateRequest) => {
-      return client.updateSettings(userId!, updateData, token!);
+      if (!userId || !token) throw new Error('Missing required params');
+      return client.updateSettings(userId, updateData, token);
     },
     onSuccess: response => {
       if (response.success && response.data && userId) {

@@ -57,9 +57,10 @@ export const useAnalytics = (
   } = useQuery({
     queryKey: QUERY_KEYS.analytics(userId ?? ''),
     queryFn: async () => {
+      if (!userId || !token) throw new Error('Missing required params');
       const response = await client.getAnalytics(
-        userId!,
-        token!,
+        userId,
+        token,
         options?.params
       );
       if (!response.success || !response.data) {

@@ -66,8 +66,9 @@ export const useStorageConfig = (
   } = useQuery({
     queryKey: QUERY_KEYS.storageConfig(entitySlug ?? ''),
     queryFn: async (): Promise<EntityStorageConfig | null> => {
+      if (!entitySlug || !token) throw new Error('Missing required params');
       try {
-        const response = await client.getStorageConfig(entitySlug!, token!);
+        const response = await client.getStorageConfig(entitySlug, token);
         if (response.success && response.data) {
           return response.data;
         }
@@ -98,7 +99,8 @@ export const useStorageConfig = (
 
   const createOrUpdateMutation = useMutation({
     mutationFn: async (createData: StorageConfigCreateRequest) => {
-      return client.createStorageConfig(entitySlug!, createData, token!);
+      if (!entitySlug || !token) throw new Error('Missing required params');
+      return client.createStorageConfig(entitySlug, createData, token);
     },
     onSuccess: response => {
       if (response.success && response.data && entitySlug) {
@@ -112,7 +114,8 @@ export const useStorageConfig = (
 
   const updateMutation = useMutation({
     mutationFn: async (updateData: StorageConfigUpdateRequest) => {
-      return client.updateStorageConfig(entitySlug!, updateData, token!);
+      if (!entitySlug || !token) throw new Error('Missing required params');
+      return client.updateStorageConfig(entitySlug, updateData, token);
     },
     onSuccess: response => {
       if (response.success && response.data && entitySlug) {
@@ -126,7 +129,8 @@ export const useStorageConfig = (
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      return client.deleteStorageConfig(entitySlug!, token!);
+      if (!entitySlug || !token) throw new Error('Missing required params');
+      return client.deleteStorageConfig(entitySlug, token);
     },
     onSuccess: response => {
       if (response.success && entitySlug) {

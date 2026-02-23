@@ -78,9 +78,10 @@ export const useProjects = (
   } = useQuery({
     queryKey: QUERY_KEYS.projects(entitySlug ?? ''),
     queryFn: async () => {
+      if (!entitySlug || !token) throw new Error('Missing required params');
       const response = await client.getProjects(
-        entitySlug!,
-        token!,
+        entitySlug,
+        token,
         options?.params
       );
       if (!response.success || !response.data) {
@@ -103,7 +104,8 @@ export const useProjects = (
 
   const createMutation = useMutation({
     mutationFn: async (data: ProjectCreateRequest) => {
-      return client.createProject(entitySlug!, data, token!);
+      if (!entitySlug || !token) throw new Error('Missing required params');
+      return client.createProject(entitySlug, data, token);
     },
     onSuccess: response => {
       if (response.success) invalidateProjects();
@@ -118,7 +120,8 @@ export const useProjects = (
       projectId: string;
       data: ProjectUpdateRequest;
     }) => {
-      return client.updateProject(entitySlug!, projectId, data, token!);
+      if (!entitySlug || !token) throw new Error('Missing required params');
+      return client.updateProject(entitySlug, projectId, data, token);
     },
     onSuccess: response => {
       if (response.success) invalidateProjects();
@@ -127,7 +130,8 @@ export const useProjects = (
 
   const deleteMutation = useMutation({
     mutationFn: async (projectId: string) => {
-      return client.deleteProject(entitySlug!, projectId, token!);
+      if (!entitySlug || !token) throw new Error('Missing required params');
+      return client.deleteProject(entitySlug, projectId, token);
     },
     onSuccess: response => {
       if (response.success) invalidateProjects();
@@ -136,7 +140,8 @@ export const useProjects = (
 
   const refreshApiKeyMutation = useMutation({
     mutationFn: async (projectId: string) => {
-      return client.refreshProjectApiKey(entitySlug!, projectId, token!);
+      if (!entitySlug || !token) throw new Error('Missing required params');
+      return client.refreshProjectApiKey(entitySlug, projectId, token);
     },
     onSuccess: response => {
       if (response.success) invalidateProjects();
@@ -145,8 +150,9 @@ export const useProjects = (
 
   const getProject = useCallback(
     async (projectId: string): Promise<BaseResponse<Project>> => {
+      if (!entitySlug || !token) throw new Error('Missing required params');
       try {
-        return await client.getProject(entitySlug!, projectId, token!);
+        return await client.getProject(entitySlug, projectId, token);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to get project';
@@ -162,8 +168,9 @@ export const useProjects = (
 
   const getProjectApiKey = useCallback(
     async (projectId: string): Promise<BaseResponse<GetApiKeyResponse>> => {
+      if (!entitySlug || !token) throw new Error('Missing required params');
       try {
-        return await client.getProjectApiKey(entitySlug!, projectId, token!);
+        return await client.getProjectApiKey(entitySlug, projectId, token);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to get API key';

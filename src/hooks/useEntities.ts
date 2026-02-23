@@ -105,7 +105,8 @@ export const useEntities = (
   } = useQuery({
     queryKey: QUERY_KEYS.entities(),
     queryFn: async () => {
-      const response = await client.getEntities(token!);
+      if (!token) throw new Error('Missing required params');
+      const response = await client.getEntities(token);
       if (!response.success || !response.data) {
         throw new Error(response.error || 'Failed to fetch entities');
       }
@@ -123,7 +124,8 @@ export const useEntities = (
   } = useQuery({
     queryKey: QUERY_KEYS.entityMembers(entitySlug ?? ''),
     queryFn: async () => {
-      const response = await client.getEntityMembers(entitySlug!, token!);
+      if (!entitySlug || !token) throw new Error('Missing required params');
+      const response = await client.getEntityMembers(entitySlug, token);
       if (!response.success || !response.data) {
         throw new Error(response.error || 'Failed to fetch members');
       }
@@ -141,7 +143,8 @@ export const useEntities = (
   } = useQuery({
     queryKey: QUERY_KEYS.entityInvitations(entitySlug ?? ''),
     queryFn: async () => {
-      const response = await client.getEntityInvitations(entitySlug!, token!);
+      if (!entitySlug || !token) throw new Error('Missing required params');
+      const response = await client.getEntityInvitations(entitySlug, token);
       if (!response.success || !response.data) {
         throw new Error(response.error || 'Failed to fetch invitations');
       }
@@ -159,7 +162,8 @@ export const useEntities = (
   } = useQuery({
     queryKey: QUERY_KEYS.myInvitations(),
     queryFn: async () => {
-      const response = await client.getMyInvitations(token!);
+      if (!token) throw new Error('Missing required params');
+      const response = await client.getMyInvitations(token);
       if (!response.success || !response.data) {
         throw new Error(response.error || 'Failed to fetch my invitations');
       }
@@ -176,7 +180,8 @@ export const useEntities = (
 
   const createEntityMutation = useMutation({
     mutationFn: async (data: CreateEntityRequest) => {
-      return client.createEntity(data, token!);
+      if (!token) throw new Error('Missing required params');
+      return client.createEntity(data, token);
     },
     onSuccess: response => {
       if (response.success) {
@@ -193,7 +198,8 @@ export const useEntities = (
       slug: string;
       data: UpdateEntityRequest;
     }) => {
-      return client.updateEntity(slug, data, token!);
+      if (!token) throw new Error('Missing required params');
+      return client.updateEntity(slug, data, token);
     },
     onSuccess: response => {
       if (response.success) {
@@ -204,7 +210,8 @@ export const useEntities = (
 
   const deleteEntityMutation = useMutation({
     mutationFn: async (slug: string) => {
-      return client.deleteEntity(slug, token!);
+      if (!token) throw new Error('Missing required params');
+      return client.deleteEntity(slug, token);
     },
     onSuccess: response => {
       if (response.success) {
@@ -225,7 +232,8 @@ export const useEntities = (
       memberId: string;
       role: EntityRole;
     }) => {
-      return client.updateEntityMemberRole(entitySlug!, memberId, role, token!);
+      if (!entitySlug || !token) throw new Error('Missing required params');
+      return client.updateEntityMemberRole(entitySlug, memberId, role, token);
     },
     onSuccess: response => {
       if (response.success && entitySlug) {
@@ -238,7 +246,8 @@ export const useEntities = (
 
   const removeMemberMutation = useMutation({
     mutationFn: async (memberId: string) => {
-      return client.removeEntityMember(entitySlug!, memberId, token!);
+      if (!entitySlug || !token) throw new Error('Missing required params');
+      return client.removeEntityMember(entitySlug, memberId, token);
     },
     onSuccess: response => {
       if (response.success && entitySlug) {
@@ -255,7 +264,8 @@ export const useEntities = (
 
   const createInvitationMutation = useMutation({
     mutationFn: async (data: InviteMemberRequest) => {
-      return client.createEntityInvitation(entitySlug!, data, token!);
+      if (!entitySlug || !token) throw new Error('Missing required params');
+      return client.createEntityInvitation(entitySlug, data, token);
     },
     onSuccess: response => {
       if (response.success && entitySlug) {
@@ -268,7 +278,8 @@ export const useEntities = (
 
   const cancelInvitationMutation = useMutation({
     mutationFn: async (invitationId: string) => {
-      return client.cancelEntityInvitation(entitySlug!, invitationId, token!);
+      if (!entitySlug || !token) throw new Error('Missing required params');
+      return client.cancelEntityInvitation(entitySlug, invitationId, token);
     },
     onSuccess: response => {
       if (response.success && entitySlug) {
@@ -281,7 +292,8 @@ export const useEntities = (
 
   const acceptInvitationMutation = useMutation({
     mutationFn: async (invitationToken: string) => {
-      return client.acceptInvitation(invitationToken, token!);
+      if (!token) throw new Error('Missing required params');
+      return client.acceptInvitation(invitationToken, token);
     },
     onSuccess: response => {
       if (response.success) {
@@ -293,7 +305,8 @@ export const useEntities = (
 
   const declineInvitationMutation = useMutation({
     mutationFn: async (invitationToken: string) => {
-      return client.declineInvitation(invitationToken, token!);
+      if (!token) throw new Error('Missing required params');
+      return client.declineInvitation(invitationToken, token);
     },
     onSuccess: response => {
       if (response.success) {
@@ -308,8 +321,9 @@ export const useEntities = (
 
   const getEntity = useCallback(
     async (slug: string): Promise<BaseResponse<EntityWithRole>> => {
+      if (!token) throw new Error('Missing required params');
       try {
-        return await client.getEntity(slug, token!);
+        return await client.getEntity(slug, token);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to get entity';

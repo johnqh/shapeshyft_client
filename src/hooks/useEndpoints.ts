@@ -74,10 +74,12 @@ export const useEndpoints = (
   } = useQuery({
     queryKey: QUERY_KEYS.endpoints(entitySlug ?? '', projectId ?? ''),
     queryFn: async () => {
+      if (!entitySlug || !projectId || !token)
+        throw new Error('Missing required params');
       const response = await client.getEndpoints(
-        entitySlug!,
-        projectId!,
-        token!,
+        entitySlug,
+        projectId,
+        token,
         options?.params
       );
       if (!response.success || !response.data) {
@@ -100,7 +102,9 @@ export const useEndpoints = (
 
   const createMutation = useMutation({
     mutationFn: async (data: EndpointCreateRequest) => {
-      return client.createEndpoint(entitySlug!, projectId!, data, token!);
+      if (!entitySlug || !projectId || !token)
+        throw new Error('Missing required params');
+      return client.createEndpoint(entitySlug, projectId, data, token);
     },
     onSuccess: response => {
       if (response.success) invalidateEndpoints();
@@ -115,12 +119,14 @@ export const useEndpoints = (
       endpointId: string;
       data: EndpointUpdateRequest;
     }) => {
+      if (!entitySlug || !projectId || !token)
+        throw new Error('Missing required params');
       return client.updateEndpoint(
-        entitySlug!,
-        projectId!,
+        entitySlug,
+        projectId,
         endpointId,
         data,
-        token!
+        token
       );
     },
     onSuccess: response => {
@@ -130,7 +136,9 @@ export const useEndpoints = (
 
   const deleteMutation = useMutation({
     mutationFn: async (endpointId: string) => {
-      return client.deleteEndpoint(entitySlug!, projectId!, endpointId, token!);
+      if (!entitySlug || !projectId || !token)
+        throw new Error('Missing required params');
+      return client.deleteEndpoint(entitySlug, projectId, endpointId, token);
     },
     onSuccess: response => {
       if (response.success) invalidateEndpoints();
@@ -139,12 +147,14 @@ export const useEndpoints = (
 
   const getEndpoint = useCallback(
     async (endpointId: string): Promise<BaseResponse<Endpoint>> => {
+      if (!entitySlug || !projectId || !token)
+        throw new Error('Missing required params');
       try {
         return await client.getEndpoint(
-          entitySlug!,
-          projectId!,
+          entitySlug,
+          projectId,
           endpointId,
-          token!
+          token
         );
       } catch (err) {
         const errorMessage =

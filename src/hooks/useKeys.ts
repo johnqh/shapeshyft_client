@@ -70,7 +70,8 @@ export const useKeys = (
   } = useQuery({
     queryKey: QUERY_KEYS.keys(entitySlug ?? ''),
     queryFn: async () => {
-      const response = await client.getKeys(entitySlug!, token!);
+      if (!entitySlug || !token) throw new Error('Missing required params');
+      const response = await client.getKeys(entitySlug, token);
       if (!response.success || !response.data) {
         throw new Error(response.error || 'Failed to fetch keys');
       }
@@ -89,7 +90,8 @@ export const useKeys = (
 
   const createMutation = useMutation({
     mutationFn: async (data: LlmApiKeyCreateRequest) => {
-      return client.createKey(entitySlug!, data, token!);
+      if (!entitySlug || !token) throw new Error('Missing required params');
+      return client.createKey(entitySlug, data, token);
     },
     onSuccess: response => {
       if (response.success) invalidateKeys();
@@ -104,7 +106,8 @@ export const useKeys = (
       keyId: string;
       data: LlmApiKeyUpdateRequest;
     }) => {
-      return client.updateKey(entitySlug!, keyId, data, token!);
+      if (!entitySlug || !token) throw new Error('Missing required params');
+      return client.updateKey(entitySlug, keyId, data, token);
     },
     onSuccess: response => {
       if (response.success) invalidateKeys();
@@ -113,7 +116,8 @@ export const useKeys = (
 
   const deleteMutation = useMutation({
     mutationFn: async (keyId: string) => {
-      return client.deleteKey(entitySlug!, keyId, token!);
+      if (!entitySlug || !token) throw new Error('Missing required params');
+      return client.deleteKey(entitySlug, keyId, token);
     },
     onSuccess: response => {
       if (response.success) invalidateKeys();
@@ -122,8 +126,9 @@ export const useKeys = (
 
   const getKey = useCallback(
     async (keyId: string): Promise<BaseResponse<LlmApiKeySafe>> => {
+      if (!entitySlug || !token) throw new Error('Missing required params');
       try {
-        return await client.getKey(entitySlug!, keyId, token!);
+        return await client.getKey(entitySlug, keyId, token);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to get key';
