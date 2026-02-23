@@ -2,46 +2,55 @@
 
 ## Priority 1 - High Impact
 
-### 1. Add JSDoc to ShapeshyftClient Methods and Hook Parameters
-- The `ShapeshyftClient` class methods have JSDoc with HTTP method and path (e.g., `GET /api/v1/entities/:entitySlug/keys`), which is good. However, the individual parameters lack `@param` and `@returns` documentation. For example, `getKeys(entitySlug, token)` does not explain what `entitySlug` is or what the response shape contains.
-- The hook functions (`useKeys`, `useProjects`, `useEndpoints`, `useAiExecute`, `useAnalytics`, `useSettings`) have return type interfaces documented, but the hook parameters themselves are undocumented. The `options` parameter objects (e.g., `testMode`, `enabled`, `params`) need `@param` tags explaining their behavior.
-- The `UseKeysReturn`, `UseProjectsReturn`, etc. interfaces should document each method (e.g., what `refetch` vs `reset` does, when to use `clearError`).
+### 1. Add JSDoc to ShapeshyftClient Methods and Hook Parameters -- COMPLETED
+- Added `@param` and `@returns` documentation to all ShapeshyftClient methods (getKeys, getKey, createKey, updateKey, deleteKey, getStorageConfig, createStorageConfig, updateStorageConfig, deleteStorageConfig, getProjects, getProject, createProject, updateProject, deleteProject, getProjectApiKey, refreshProjectApiKey, getEndpoints, getEndpoint, createEndpoint, updateEndpoint, deleteEndpoint, getAnalytics, getSettings, updateSettings, executeAiGet, executeAiPost, executeAi, getAiPrompt, getEntities, getEntity, createEntity, updateEntity, deleteEntity, getEntityMembers, updateEntityMemberRole, removeEntityMember, getEntityInvitations, createEntityInvitation, cancelEntityInvitation, getMyInvitations, acceptInvitation, declineInvitation, getRateLimitsConfig, getRateLimitHistory, getProviders, getProvider, getProviderModels).
+- Added `@param`, `@returns`, and `@example` JSDoc to all hook functions (useKeys, useProjects, useEndpoints, useAiExecute, useAnalytics, useSettings).
+- Added JSDoc comments to all properties and methods in return type interfaces (UseKeysReturn, UseProjectsReturn, UseEndpointsReturn, UseAiExecuteReturn, UseAnalyticsReturn, UseSettingsReturn).
+- Added class-level `@example` JSDoc to ShapeshyftClient.
 
-### 2. Add Test Coverage for ShapeshyftClient Class
-- The `ShapeshyftClient.test.ts` file exists but should verify all client methods including entity, member, invitation, rate limit, provider, and storage config operations. Currently, the test files for hooks (`useKeys.test.ts`, `useProjects.test.ts`, etc.) test the hooks with mock network clients, but the `ShapeshyftClient` class itself -- which handles URL construction, header creation, and error handling -- needs dedicated unit tests.
-- Key scenarios to test: correct URL encoding of `entitySlug` and `projectId` with special characters, test mode parameter injection, error response handling for different HTTP status codes, and correct header construction for auth vs. API key vs. no-auth endpoints.
+### 2. Add Test Coverage for ShapeshyftClient Class -- COMPLETED
+- Added test sections for: Storage Config (CRUD), Entities (CRUD), Entity Members (get, update role, remove), Entity Invitations (get, create, cancel, getMyInvitations, accept, decline), Rate Limits (config, history), Providers (getProviders, getProvider, getProviderModels).
+- Added URL Encoding tests verifying correct `encodeURIComponent` behavior with special characters (spaces, slashes, ampersands) in entitySlug, projectId, and AI path segments.
+- Added Test Mode tests verifying `testMode=true` parameter injection, absence when disabled, and merging with existing query params.
+- Added API Key Headers tests verifying auth header construction and timeout forwarding for AI endpoints.
+- Added error handling tests verifying ShapeshyftApiError instance and status code extraction.
+- Test count increased from 112 to 148 (36 new tests).
 
-### 3. Improve Error Handling Granularity
-- The `handleApiError` function in `shapeshyft-helpers.ts` extracts error messages from responses but always wraps them in a generic `Error`. There is no distinction between network errors, authentication errors (401), authorization errors (403), not-found errors (404), validation errors (422), and server errors (500).
-- Consider creating typed error classes (e.g., `ShapeshyftApiError extends Error` with `statusCode`, `errorCode`, and `details` fields) so consumers can handle different error types programmatically.
-- The hooks currently surface errors as `Optional<string>` -- a typed error object would allow the app to show more specific error messages and take appropriate recovery actions (e.g., redirect to login on 401).
+### 3. Improve Error Handling Granularity -- COMPLETED
+- Created `ShapeshyftApiError extends Error` class in `shapeshyft-helpers.ts` with `statusCode`, `errorCode`, and `details` fields.
+- Updated `handleApiError` to return `ShapeshyftApiError` instances that extract `status`, `code`, and `details` from API responses.
+- Exported `ShapeshyftApiError` from the package's public API (`utils/index.ts`).
+- Added tests for status code extraction, error code and details, and name property.
+- Note: Hooks still surface errors as `Optional<string>` for backward compatibility. Consumers can catch `ShapeshyftApiError` from client method calls for typed error handling.
 
 ## Priority 2 - Medium Impact
 
-### 3. Add a `verify` Script for Pre-Commit Checks
-- The CLAUDE.md notes "No `verify` script. Run checks manually: `bun run typecheck && bun run lint && bun run test:run && bun run build`". This is inconsistent with `shapeshyft_types` which has `bun run verify`.
-- Adding a `verify` script to `package.json` would standardize the pre-commit workflow across all ShapeShyft projects and reduce the chance of publishing with failing checks.
+### 3. Add a `verify` Script for Pre-Commit Checks -- COMPLETED
+- Added `"verify": "bun run typecheck && bun run lint && bun run test && bun run build"` to `package.json` scripts.
+- Updated CLAUDE.md to document the `verify` script and remove "No verify script" notes.
 
-### 4. Add Optimistic Updates to Mutation Hooks
-- The CRUD hooks (`useKeys`, `useProjects`, `useEndpoints`) use `onSuccess: () => invalidateQueries()` to refresh data after mutations. This means the UI shows stale data until the refetch completes.
-- TanStack Query supports optimistic updates via `onMutate` that update the cache immediately and roll back on error. This would significantly improve perceived performance for create/update/delete operations.
-- This is especially impactful for the endpoint and project management UIs where users expect instant feedback.
+### 4. Add Optimistic Updates to Mutation Hooks -- SKIPPED
+- Requires significant architectural changes to all mutation hooks (onMutate, onError rollback, cache snapshots).
+- Would change the hook behavior contract that shapeshyft_lib depends on.
+- Recommended as a future enhancement with careful downstream coordination.
 
-### 5. Add Retry Configuration for Network Failures
-- The hooks use TanStack Query's default retry behavior but do not explicitly configure retry counts or backoff strategies. Network failures during AI execution (which can take several seconds) could benefit from configurable retry logic.
-- Consider exposing retry options in the hook `options` parameter, with sensible defaults: queries retry 3 times with exponential backoff, mutations do not retry (to avoid duplicate side effects).
-- The `useAiExecute` hook's `execute` function is particularly important -- AI execution can fail transiently and should have user-controllable retry behavior.
+### 5. Add Retry Configuration for Network Failures -- SKIPPED
+- Requires adding new options to all hook parameter signatures.
+- Default TanStack Query retry behavior is reasonable for most use cases.
+- Recommended as a future enhancement if specific retry needs arise.
 
 ## Priority 3 - Nice to Have
 
-### 6. Export ShapeshyftClient Configuration Type
-- The `ShapeshyftClient` constructor takes an inline `config` object `{ baseUrl, networkClient, testMode? }`. This type is not exported, so consumers who need to pass around client configuration must reconstruct the type.
-- Consider exporting a `ShapeshyftClientConfig` interface.
+### 6. Export ShapeshyftClient Configuration Type -- COMPLETED
+- Created and exported `ShapeshyftClientConfig` interface with documented properties (baseUrl, networkClient, testMode).
+- Updated `ShapeshyftClient` constructor to accept `ShapeshyftClientConfig`.
+- Exported the type from `network/index.ts` and the package's public API.
 
-### 7. Add Hook Usage Examples to Hook Files
-- Each hook file has a return type interface but lacks inline usage examples. Adding `@example` JSDoc blocks showing how to use the hook in a component would improve developer onboarding.
-- This is especially valuable for `useAiExecute` which has a more complex parameter signature with `organizationPath`, `projectName`, `endpointName`, etc.
+### 7. Add Hook Usage Examples to Hook Files -- COMPLETED
+- Added `@example` JSDoc blocks with TypeScript code examples to: useKeys, useProjects, useEndpoints, useAiExecute, useAnalytics, useSettings.
+- Each example shows the most common usage patterns (instantiation, data access, CRUD operations).
 
-### 8. Consider Deduplicating ShapeshyftClient Instantiation in Hooks
-- Each hook (`useKeys`, `useProjects`, `useEndpoints`, etc.) independently creates a `ShapeshyftClient` via `useMemo`. When multiple hooks are used in the same component, multiple client instances are created with the same configuration.
-- Consider accepting a `ShapeshyftClient` instance directly (or providing a React context) to allow sharing a single client instance across hooks, reducing memory overhead and improving consistency.
+### 8. Consider Deduplicating ShapeshyftClient Instantiation in Hooks -- SKIPPED
+- Requires major architectural change (React context provider or breaking the hook parameter signature).
+- Would change the public API that shapeshyft_lib depends on.
+- The useMemo approach is lightweight and the per-hook client instances have negligible memory overhead.

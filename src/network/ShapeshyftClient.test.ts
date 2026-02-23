@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { NetworkClient } from '@sudobility/shapeshyft_types';
 import { ShapeshyftClient } from './ShapeshyftClient';
+import { ShapeshyftApiError } from '../utils/shapeshyft-helpers';
 
 // Mock NetworkClient
 function createMockNetworkClient(): NetworkClient {
@@ -627,11 +628,620 @@ describe('ShapeshyftClient', () => {
   });
 
   // =============================================================================
+  // STORAGE CONFIG
+  // =============================================================================
+
+  describe('Storage Config', () => {
+    const entitySlug = 'my-org';
+    const token = 'firebase-token';
+
+    describe('getStorageConfig', () => {
+      it('should fetch storage config for an entity', async () => {
+        const mockConfig = { provider: 's3', bucket: 'my-bucket' };
+        vi.mocked(mockNetworkClient.get).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: mockConfig },
+        });
+
+        const result = await client.getStorageConfig(entitySlug, token);
+
+        expect(mockNetworkClient.get).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/entities/${entitySlug}/storage`,
+          expect.objectContaining({
+            headers: expect.objectContaining({
+              Authorization: `Bearer ${token}`,
+            }),
+          })
+        );
+        expect(result.data).toEqual(mockConfig);
+      });
+    });
+
+    describe('createStorageConfig', () => {
+      it('should create storage config', async () => {
+        const createData = { provider: 's3', bucket: 'new-bucket' };
+        vi.mocked(mockNetworkClient.post).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: createData },
+        });
+
+        const result = await client.createStorageConfig(
+          entitySlug,
+          createData as never,
+          token
+        );
+
+        expect(mockNetworkClient.post).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/entities/${entitySlug}/storage`,
+          createData,
+          expect.any(Object)
+        );
+        expect(result.data).toEqual(createData);
+      });
+    });
+
+    describe('updateStorageConfig', () => {
+      it('should update storage config', async () => {
+        const updateData = { bucket: 'updated-bucket' };
+        vi.mocked(mockNetworkClient.put).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: updateData },
+        });
+
+        await client.updateStorageConfig(
+          entitySlug,
+          updateData as never,
+          token
+        );
+
+        expect(mockNetworkClient.put).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/entities/${entitySlug}/storage`,
+          updateData,
+          expect.any(Object)
+        );
+      });
+    });
+
+    describe('deleteStorageConfig', () => {
+      it('should delete storage config', async () => {
+        vi.mocked(mockNetworkClient.delete).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: {} },
+        });
+
+        await client.deleteStorageConfig(entitySlug, token);
+
+        expect(mockNetworkClient.delete).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/entities/${entitySlug}/storage`,
+          expect.any(Object)
+        );
+      });
+    });
+  });
+
+  // =============================================================================
+  // ENTITIES
+  // =============================================================================
+
+  describe('Entities', () => {
+    const token = 'firebase-token';
+    const entitySlug = 'my-org';
+
+    describe('getEntities', () => {
+      it('should fetch all entities for the user', async () => {
+        const mockEntities = [{ entitySlug: 'org-1', displayName: 'Org 1' }];
+        vi.mocked(mockNetworkClient.get).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: mockEntities },
+        });
+
+        const result = await client.getEntities(token);
+
+        expect(mockNetworkClient.get).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/entities`,
+          expect.objectContaining({
+            headers: expect.objectContaining({
+              Authorization: `Bearer ${token}`,
+            }),
+          })
+        );
+        expect(result.data).toEqual(mockEntities);
+      });
+    });
+
+    describe('getEntity', () => {
+      it('should fetch a single entity', async () => {
+        const mockEntity = {
+          entitySlug: entitySlug,
+          displayName: 'My Org',
+        };
+        vi.mocked(mockNetworkClient.get).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: mockEntity },
+        });
+
+        const result = await client.getEntity(entitySlug, token);
+
+        expect(mockNetworkClient.get).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/entities/${entitySlug}`,
+          expect.any(Object)
+        );
+        expect(result.data).toEqual(mockEntity);
+      });
+    });
+
+    describe('createEntity', () => {
+      it('should create a new entity', async () => {
+        const createData = { display_name: 'New Org', slug: 'new-org' };
+        vi.mocked(mockNetworkClient.post).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: { uuid: 'new-id', ...createData } },
+        });
+
+        const result = await client.createEntity(createData as never, token);
+
+        expect(mockNetworkClient.post).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/entities`,
+          createData,
+          expect.any(Object)
+        );
+        expect(result.success).toBe(true);
+      });
+    });
+
+    describe('updateEntity', () => {
+      it('should update an entity', async () => {
+        const updateData = { display_name: 'Updated Org' };
+        vi.mocked(mockNetworkClient.put).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: { entitySlug, ...updateData } },
+        });
+
+        await client.updateEntity(entitySlug, updateData as never, token);
+
+        expect(mockNetworkClient.put).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/entities/${entitySlug}`,
+          updateData,
+          expect.any(Object)
+        );
+      });
+    });
+
+    describe('deleteEntity', () => {
+      it('should delete an entity', async () => {
+        vi.mocked(mockNetworkClient.delete).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: {} },
+        });
+
+        await client.deleteEntity(entitySlug, token);
+
+        expect(mockNetworkClient.delete).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/entities/${entitySlug}`,
+          expect.any(Object)
+        );
+      });
+    });
+  });
+
+  // =============================================================================
+  // ENTITY MEMBERS
+  // =============================================================================
+
+  describe('Entity Members', () => {
+    const entitySlug = 'my-org';
+    const token = 'firebase-token';
+    const memberId = 'member-123';
+
+    describe('getEntityMembers', () => {
+      it('should fetch all members for an entity', async () => {
+        const mockMembers = [
+          { uuid: memberId, email: 'user@example.com', role: 'admin' },
+        ];
+        vi.mocked(mockNetworkClient.get).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: mockMembers },
+        });
+
+        const result = await client.getEntityMembers(entitySlug, token);
+
+        expect(mockNetworkClient.get).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/entities/${entitySlug}/members`,
+          expect.any(Object)
+        );
+        expect(result.data).toEqual(mockMembers);
+      });
+    });
+
+    describe('updateEntityMemberRole', () => {
+      it('should update a member role', async () => {
+        vi.mocked(mockNetworkClient.put).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: { uuid: memberId, role: 'admin' } },
+        });
+
+        await client.updateEntityMemberRole(
+          entitySlug,
+          memberId,
+          'admin' as never,
+          token
+        );
+
+        expect(mockNetworkClient.put).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/entities/${entitySlug}/members/${memberId}`,
+          { role: 'admin' },
+          expect.any(Object)
+        );
+      });
+    });
+
+    describe('removeEntityMember', () => {
+      it('should remove a member from an entity', async () => {
+        vi.mocked(mockNetworkClient.delete).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: {} },
+        });
+
+        await client.removeEntityMember(entitySlug, memberId, token);
+
+        expect(mockNetworkClient.delete).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/entities/${entitySlug}/members/${memberId}`,
+          expect.any(Object)
+        );
+      });
+    });
+  });
+
+  // =============================================================================
+  // ENTITY INVITATIONS
+  // =============================================================================
+
+  describe('Entity Invitations', () => {
+    const entitySlug = 'my-org';
+    const token = 'firebase-token';
+
+    describe('getEntityInvitations', () => {
+      it('should fetch all invitations for an entity', async () => {
+        const mockInvitations = [
+          { uuid: 'inv-1', email: 'invited@example.com', role: 'member' },
+        ];
+        vi.mocked(mockNetworkClient.get).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: mockInvitations },
+        });
+
+        const result = await client.getEntityInvitations(entitySlug, token);
+
+        expect(mockNetworkClient.get).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/entities/${entitySlug}/invitations`,
+          expect.any(Object)
+        );
+        expect(result.data).toEqual(mockInvitations);
+      });
+    });
+
+    describe('createEntityInvitation', () => {
+      it('should create an invitation', async () => {
+        const inviteData = {
+          email: 'new@example.com',
+          role: 'member' as never,
+        };
+        vi.mocked(mockNetworkClient.post).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: { uuid: 'inv-new', ...inviteData } },
+        });
+
+        await client.createEntityInvitation(entitySlug, inviteData, token);
+
+        expect(mockNetworkClient.post).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/entities/${entitySlug}/invitations`,
+          inviteData,
+          expect.any(Object)
+        );
+      });
+    });
+
+    describe('cancelEntityInvitation', () => {
+      it('should cancel an invitation', async () => {
+        vi.mocked(mockNetworkClient.delete).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: {} },
+        });
+
+        await client.cancelEntityInvitation(entitySlug, 'inv-1', token);
+
+        expect(mockNetworkClient.delete).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/entities/${entitySlug}/invitations/inv-1`,
+          expect.any(Object)
+        );
+      });
+    });
+
+    describe('getMyInvitations', () => {
+      it('should fetch pending invitations for the current user', async () => {
+        vi.mocked(mockNetworkClient.get).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: [] },
+        });
+
+        await client.getMyInvitations(token);
+
+        expect(mockNetworkClient.get).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/invitations`,
+          expect.any(Object)
+        );
+      });
+    });
+
+    describe('acceptInvitation', () => {
+      it('should accept an invitation', async () => {
+        vi.mocked(mockNetworkClient.post).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: {} },
+        });
+
+        await client.acceptInvitation('invite-token-abc', token);
+
+        expect(mockNetworkClient.post).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/invitations/invite-token-abc/accept`,
+          {},
+          expect.any(Object)
+        );
+      });
+    });
+
+    describe('declineInvitation', () => {
+      it('should decline an invitation', async () => {
+        vi.mocked(mockNetworkClient.post).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: {} },
+        });
+
+        await client.declineInvitation('invite-token-abc', token);
+
+        expect(mockNetworkClient.post).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/invitations/invite-token-abc/decline`,
+          {},
+          expect.any(Object)
+        );
+      });
+    });
+  });
+
+  // =============================================================================
+  // RATE LIMITS
+  // =============================================================================
+
+  describe('Rate Limits', () => {
+    const token = 'firebase-token';
+    const entitySlug = 'my-org';
+
+    describe('getRateLimitsConfig', () => {
+      it('should fetch rate limits config', async () => {
+        const mockConfig = { requests_per_hour: 100 };
+        vi.mocked(mockNetworkClient.get).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: mockConfig },
+        });
+
+        const result = await client.getRateLimitsConfig(token, entitySlug);
+
+        expect(mockNetworkClient.get).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/ratelimits/${entitySlug}`,
+          expect.any(Object)
+        );
+        expect(result.data).toEqual(mockConfig);
+      });
+    });
+
+    describe('getRateLimitHistory', () => {
+      it('should fetch rate limit history for a period', async () => {
+        const mockHistory = { entries: [] };
+        vi.mocked(mockNetworkClient.get).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: mockHistory },
+        });
+
+        const result = await client.getRateLimitHistory(
+          'hour',
+          token,
+          entitySlug
+        );
+
+        expect(mockNetworkClient.get).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/ratelimits/${entitySlug}/history/hour`,
+          expect.any(Object)
+        );
+        expect(result.data).toEqual(mockHistory);
+      });
+    });
+  });
+
+  // =============================================================================
+  // PROVIDERS
+  // =============================================================================
+
+  describe('Providers', () => {
+    describe('getProviders', () => {
+      it('should fetch all providers without auth headers', async () => {
+        const mockProviders = [{ id: 'openai', name: 'OpenAI' }];
+        vi.mocked(mockNetworkClient.get).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: mockProviders },
+        });
+
+        const result = await client.getProviders();
+
+        expect(mockNetworkClient.get).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/providers`,
+          expect.objectContaining({
+            headers: expect.not.objectContaining({
+              Authorization: expect.any(String),
+            }),
+          })
+        );
+        expect(result.data).toEqual(mockProviders);
+      });
+    });
+
+    describe('getProvider', () => {
+      it('should fetch a specific provider', async () => {
+        const mockProvider = { id: 'openai', name: 'OpenAI' };
+        vi.mocked(mockNetworkClient.get).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: mockProvider },
+        });
+
+        const result = await client.getProvider('openai' as never);
+
+        expect(mockNetworkClient.get).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/providers/openai`,
+          expect.any(Object)
+        );
+        expect(result.data).toEqual(mockProvider);
+      });
+    });
+
+    describe('getProviderModels', () => {
+      it('should fetch models for a provider', async () => {
+        const mockModels = {
+          provider: { id: 'openai' },
+          models: [{ id: 'gpt-4' }],
+        };
+        vi.mocked(mockNetworkClient.get).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: mockModels },
+        });
+
+        const result = await client.getProviderModels('openai' as never);
+
+        expect(mockNetworkClient.get).toHaveBeenCalledWith(
+          `${baseUrl}/api/v1/providers/openai/models`,
+          expect.any(Object)
+        );
+        expect(result.data).toEqual(mockModels);
+      });
+    });
+  });
+
+  // =============================================================================
+  // URL ENCODING (Special Characters)
+  // =============================================================================
+
+  describe('URL Encoding', () => {
+    const token = 'firebase-token';
+
+    it('should encode entitySlug with special characters', async () => {
+      vi.mocked(mockNetworkClient.get).mockResolvedValue({
+        ok: true,
+        data: { success: true, data: [] },
+      });
+
+      await client.getKeys('org with spaces/slashes', token);
+
+      expect(mockNetworkClient.get).toHaveBeenCalledWith(
+        `${baseUrl}/api/v1/entities/org%20with%20spaces%2Fslashes/keys`,
+        expect.any(Object)
+      );
+    });
+
+    it('should encode projectId with special characters', async () => {
+      vi.mocked(mockNetworkClient.get).mockResolvedValue({
+        ok: true,
+        data: { success: true, data: {} },
+      });
+
+      await client.getProject('org', 'proj/with&chars', token);
+
+      expect(mockNetworkClient.get).toHaveBeenCalledWith(
+        `${baseUrl}/api/v1/entities/org/projects/proj%2Fwith%26chars`,
+        expect.any(Object)
+      );
+    });
+
+    it('should encode AI path segments with special characters', async () => {
+      vi.mocked(mockNetworkClient.post).mockResolvedValue({
+        ok: true,
+        data: { success: true, data: {} },
+      });
+
+      await client.executeAiPost('org/path', 'proj name', 'end point', {});
+
+      expect(mockNetworkClient.post).toHaveBeenCalledWith(
+        `${baseUrl}/api/v1/ai/org%2Fpath/proj%20name/end%20point`,
+        {},
+        expect.any(Object)
+      );
+    });
+  });
+
+  // =============================================================================
+  // TEST MODE
+  // =============================================================================
+
+  describe('Test Mode', () => {
+    it('should append testMode=true when testMode is enabled', async () => {
+      const testClient = new ShapeshyftClient({
+        baseUrl,
+        networkClient: mockNetworkClient,
+        testMode: true,
+      });
+
+      vi.mocked(mockNetworkClient.get).mockResolvedValue({
+        ok: true,
+        data: { success: true, data: [] },
+      });
+
+      await testClient.getKeys('my-org', 'token');
+
+      expect(mockNetworkClient.get).toHaveBeenCalledWith(
+        `${baseUrl}/api/v1/entities/my-org/keys?testMode=true`,
+        expect.any(Object)
+      );
+    });
+
+    it('should not append testMode when testMode is false', async () => {
+      vi.mocked(mockNetworkClient.get).mockResolvedValue({
+        ok: true,
+        data: { success: true, data: [] },
+      });
+
+      await client.getKeys('my-org', 'token');
+
+      expect(mockNetworkClient.get).toHaveBeenCalledWith(
+        `${baseUrl}/api/v1/entities/my-org/keys`,
+        expect.any(Object)
+      );
+    });
+
+    it('should merge testMode with existing query params', async () => {
+      const testClient = new ShapeshyftClient({
+        baseUrl,
+        networkClient: mockNetworkClient,
+        testMode: true,
+      });
+
+      vi.mocked(mockNetworkClient.get).mockResolvedValue({
+        ok: true,
+        data: { success: true, data: [] },
+      });
+
+      await testClient.getProjects('my-org', 'token', {
+        is_active: 'true',
+      });
+
+      const calledUrl = vi.mocked(mockNetworkClient.get).mock.calls[0]![0];
+      expect(calledUrl).toContain('testMode=true');
+      expect(calledUrl).toContain('is_active=true');
+    });
+  });
+
+  // =============================================================================
   // ERROR HANDLING
   // =============================================================================
 
   describe('Error Handling', () => {
-    it('should throw error when response is not ok', async () => {
+    it('should throw ShapeshyftApiError when response is not ok', async () => {
       vi.mocked(mockNetworkClient.get).mockResolvedValue({
         ok: false,
         data: { success: false, error: 'Server error' },
@@ -640,6 +1250,12 @@ describe('ShapeshyftClient', () => {
       await expect(client.getKeys('user', 'token')).rejects.toThrow(
         'Failed to get keys: Server error'
       );
+
+      try {
+        await client.getKeys('user', 'token');
+      } catch (err) {
+        expect(err).toBeInstanceOf(ShapeshyftApiError);
+      }
     });
 
     it('should throw error when data is missing', async () => {
@@ -649,6 +1265,70 @@ describe('ShapeshyftClient', () => {
       });
 
       await expect(client.getKeys('user', 'token')).rejects.toThrow();
+    });
+
+    it('should include status code in ShapeshyftApiError', async () => {
+      vi.mocked(mockNetworkClient.get).mockResolvedValue({
+        ok: false,
+        status: 404,
+        data: { success: false, error: 'Entity not found' },
+      });
+
+      try {
+        await client.getEntity('nonexistent', 'token');
+      } catch (err) {
+        expect(err).toBeInstanceOf(ShapeshyftApiError);
+        expect((err as ShapeshyftApiError).statusCode).toBe(404);
+      }
+    });
+  });
+
+  // =============================================================================
+  // API KEY HEADERS (AI Endpoints)
+  // =============================================================================
+
+  describe('API Key Headers', () => {
+    it('should include API key in Authorization header when provided', async () => {
+      vi.mocked(mockNetworkClient.post).mockResolvedValue({
+        ok: true,
+        data: { success: true, data: {} },
+      });
+
+      await client.executeAiPost('org', 'proj', 'ep', {}, 'sk_live_abc123');
+
+      expect(mockNetworkClient.post).toHaveBeenCalledWith(
+        expect.any(String),
+        {},
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer sk_live_abc123',
+          }),
+        })
+      );
+    });
+
+    it('should pass timeout to network client', async () => {
+      vi.mocked(mockNetworkClient.post).mockResolvedValue({
+        ok: true,
+        data: { success: true, data: {} },
+      });
+
+      await client.executeAiPost(
+        'org',
+        'proj',
+        'ep',
+        {},
+        'key',
+        30000
+      );
+
+      expect(mockNetworkClient.post).toHaveBeenCalledWith(
+        expect.any(String),
+        {},
+        expect.objectContaining({
+          timeout: 30000,
+        })
+      );
     });
   });
 });

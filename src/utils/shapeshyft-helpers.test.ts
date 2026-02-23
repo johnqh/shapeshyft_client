@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  ShapeshyftApiError,
   createAuthHeaders,
   createHeaders,
   buildUrl,
@@ -76,6 +77,7 @@ describe('shapeshyft-helpers', () => {
       const error = handleApiError(response, 'get user');
 
       expect(error).toBeInstanceOf(Error);
+      expect(error).toBeInstanceOf(ShapeshyftApiError);
       expect(error.message).toBe('Failed to get user: Not found');
     });
 
@@ -112,6 +114,49 @@ describe('shapeshyft-helpers', () => {
       const error = handleApiError(undefined, 'load');
 
       expect(error.message).toBe('Failed to load: Unknown error');
+    });
+
+    it('should include statusCode when available', () => {
+      const response = {
+        status: 401,
+        data: { error: 'Unauthorized' },
+      };
+      const error = handleApiError(response, 'get keys');
+
+      expect(error).toBeInstanceOf(ShapeshyftApiError);
+      expect(error.statusCode).toBe(401);
+      expect(error.message).toBe('Failed to get keys: Unauthorized');
+    });
+
+    it('should include errorCode and details when available', () => {
+      const response = {
+        status: 422,
+        data: {
+          error: 'Validation failed',
+          code: 'VALIDATION_ERROR',
+          details: 'key_name is required',
+        },
+      };
+      const error = handleApiError(response, 'create key');
+
+      expect(error.statusCode).toBe(422);
+      expect(error.errorCode).toBe('VALIDATION_ERROR');
+      expect(error.details).toBe('key_name is required');
+    });
+
+    it('should have name set to ShapeshyftApiError', () => {
+      const error = handleApiError({ data: {} }, 'test');
+
+      expect(error.name).toBe('ShapeshyftApiError');
+    });
+
+    it('should leave statusCode undefined when not in response', () => {
+      const response = { data: { error: 'Something failed' } };
+      const error = handleApiError(response, 'test');
+
+      expect(error.statusCode).toBeUndefined();
+      expect(error.errorCode).toBeUndefined();
+      expect(error.details).toBeUndefined();
     });
   });
 

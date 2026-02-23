@@ -39,11 +39,12 @@ src/
 bun run build        # Build to dist/
 bun run build:watch  # Watch mode build
 bun run clean        # Remove dist/
-bun run test         # Run Vitest (watch mode)
-bun run test:run     # Run tests once
+bun run test         # Run tests once
+bun run test:watch   # Watch mode
 bun run lint         # Run ESLint
 bun run typecheck    # TypeScript check
 bun run format       # Format with Prettier
+bun run verify       # Full pre-commit check (typecheck + lint + test + build)
 ```
 
 ## Hooks
@@ -140,8 +141,8 @@ shapeshyft_app (frontend)
 Uses Vitest with mock network client:
 
 ```bash
-bun run test         # Watch mode
-bun run test:run     # Single run
+bun run test         # Single run
+bun run test:watch   # Watch mode
 ```
 
 Test coverage includes:
@@ -163,7 +164,7 @@ This project is part of the **ShapeShyft** multi-project workspace at the parent
 | `shapeshyft_app` | Transitive via shapeshyft_lib |
 
 After making changes:
-1. Run checks (no `verify` script - see below)
+1. `bun run verify`
 2. `npm publish`
 3. In `shapeshyft_lib`: `bun update @sudobility/shapeshyft_client` -> rebuild
 4. In `shapeshyft_app`: `bun update @sudobility/shapeshyft_client` -> rebuild
@@ -186,17 +187,15 @@ bun unlink @sudobility/shapeshyft_client && bun install
 
 ## Pre-Commit Checklist
 
-No `verify` script. Run checks manually:
-
 ```bash
-bun run typecheck && bun run lint && bun run test:run && bun run build
+bun run verify
 ```
 
-Note: `bun run test` starts watch mode. Use `bun run test:run` for single run.
+This runs: `typecheck && lint && test && build`.
 
 ## Gotchas
 
 - **`publishConfig.access` is `"restricted"`** -- this is intentionally a private npm package.
 - **Hooks use `networkClient`, not direct fetch** -- all HTTP goes through a `NetworkClient` interface from `@sudobility/di`.
 - **Hooks return `{ data, isLoading, error, refresh, clearError, reset }` pattern** -- `shapeshyft_lib` manager hooks depend on this exact shape. Do not change it.
-- **`bun run test` starts watch mode** -- use `bun run test:run` for CI.
+- **`bun run test` runs tests once** -- use `bun run test:watch` for watch mode during development.

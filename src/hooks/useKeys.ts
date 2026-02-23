@@ -16,31 +16,66 @@ import { QUERY_KEYS } from '../types';
 const EMPTY_KEYS: LlmApiKeySafe[] = [];
 
 /**
- * Return type for useKeys hook
+ * Return type for the {@link useKeys} hook.
  */
 export interface UseKeysReturn {
+  /** Array of LLM API keys for the current entity (empty array while loading or on error) */
   keys: LlmApiKeySafe[];
+  /** True while any query or mutation is in progress */
   isLoading: boolean;
+  /** Error message string from the most recent failed query or mutation, or null if no error */
   error: Optional<string>;
 
+  /** Trigger a refetch of the keys list from the server */
   refetch: () => void;
+  /** Fetch a single key by ID. Returns a BaseResponse (does not throw on error). */
   getKey: (keyId: string) => Promise<BaseResponse<LlmApiKeySafe>>;
+  /** Create a new LLM API key. Automatically invalidates the keys list on success. */
   createKey: (
     data: LlmApiKeyCreateRequest
   ) => Promise<BaseResponse<LlmApiKeySafe>>;
+  /** Update an existing key. Automatically invalidates the keys list on success. */
   updateKey: (
     keyId: string,
     data: LlmApiKeyUpdateRequest
   ) => Promise<BaseResponse<LlmApiKeySafe>>;
+  /** Delete a key. Automatically invalidates the keys list on success. */
   deleteKey: (keyId: string) => Promise<BaseResponse<LlmApiKeySafe>>;
 
+  /** Clear any mutation error state (query errors are cleared on next successful fetch) */
   clearError: () => void;
+  /** Remove all cached query data and clear errors. The query will re-fetch if still enabled. */
   reset: () => void;
 }
 
 /**
- * Hook for managing LLM API keys
- * Uses TanStack Query for caching with automatic refresh after mutations
+ * Hook for managing LLM API keys.
+ * Uses TanStack Query for caching with automatic refresh after mutations.
+ *
+ * @param networkClient - NetworkClient instance for making HTTP requests
+ * @param baseUrl - Base URL of the ShapeShyft API
+ * @param entitySlug - Entity slug to scope keys to, or null to disable fetching
+ * @param token - Firebase ID token for authentication, or null to disable fetching
+ * @param options - Optional configuration
+ * @param options.testMode - When true, appends testMode=true to all API requests
+ * @param options.enabled - When false, disables automatic fetching (default: true)
+ * @returns {@link UseKeysReturn} with keys data, loading/error state, and CRUD methods
+ *
+ * @example
+ * ```tsx
+ * const { keys, isLoading, error, createKey, deleteKey } = useKeys(
+ *   networkClient,
+ *   'https://api.shapeshyft.com',
+ *   'my-org',
+ *   firebaseToken
+ * );
+ *
+ * // Create a key
+ * await createKey({ key_name: 'OpenAI', provider: 'openai', api_key: 'sk-...' });
+ *
+ * // Delete a key
+ * await deleteKey('key-uuid');
+ * ```
  */
 export const useKeys = (
   networkClient: NetworkClient,

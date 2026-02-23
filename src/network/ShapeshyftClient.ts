@@ -51,19 +51,46 @@ import {
 } from '../utils/shapeshyft-helpers';
 
 /**
- * ShapeShyft API client
- * Provides typed methods for all ShapeShyft API endpoints
+ * Configuration for creating a {@link ShapeshyftClient} instance.
+ */
+export interface ShapeshyftClientConfig {
+  /** Base URL of the ShapeShyft API (e.g., "https://api.shapeshyft.com") */
+  baseUrl: string;
+  /** Network client implementing the NetworkClient interface from @sudobility/di */
+  networkClient: NetworkClient;
+  /** When true, appends `testMode=true` query parameter to all API requests */
+  testMode?: boolean;
+}
+
+/**
+ * ShapeShyft API client.
+ * Provides typed methods for all ShapeShyft API endpoints including
+ * LLM key management, project/endpoint CRUD, AI execution, entity
+ * management, analytics, settings, rate limits, and provider queries.
+ *
+ * All authenticated endpoints require a Firebase ID token.
+ * AI execution endpoints optionally accept a project API key.
+ * Provider endpoints are public and require no authentication.
+ *
+ * @example
+ * ```typescript
+ * import { ShapeshyftClient } from '@sudobility/shapeshyft_client';
+ *
+ * const client = new ShapeshyftClient({
+ *   baseUrl: 'https://api.shapeshyft.com',
+ *   networkClient: myNetworkClient,
+ *   testMode: false,
+ * });
+ *
+ * const keys = await client.getKeys('my-org', firebaseToken);
+ * ```
  */
 export class ShapeshyftClient {
   private readonly baseUrl: string;
   private readonly networkClient: NetworkClient;
   private readonly testMode: boolean;
 
-  constructor(config: {
-    baseUrl: string;
-    networkClient: NetworkClient;
-    testMode?: boolean;
-  }) {
+  constructor(config: ShapeshyftClientConfig) {
     this.baseUrl = config.baseUrl;
     this.networkClient = config.networkClient;
     this.testMode = config.testMode ?? false;
@@ -95,8 +122,13 @@ export class ShapeshyftClient {
   // =============================================================================
 
   /**
-   * Get all LLM API keys for an entity
+   * Get all LLM API keys for an entity.
    * GET /api/v1/entities/:entitySlug/keys
+   *
+   * @param entitySlug - URL-safe slug identifying the entity (e.g., "my-org")
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing an array of safe key objects (API key values are masked)
+   * @throws {ShapeshyftApiError} If the request fails (e.g., 401 unauthorized, 404 entity not found)
    */
   async getKeys(
     entitySlug: string,
@@ -123,8 +155,14 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Get a single LLM API key
+   * Get a single LLM API key by ID.
    * GET /api/v1/entities/:entitySlug/keys/:keyId
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param keyId - UUID of the LLM API key to retrieve
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the safe key object (API key value is masked)
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async getKey(
     entitySlug: string,
@@ -148,8 +186,14 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Create a new LLM API key
+   * Create a new LLM API key for an entity.
    * POST /api/v1/entities/:entitySlug/keys
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param data - Key creation payload including key_name, provider, and api_key
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the created key (API key value is masked)
+   * @throws {ShapeshyftApiError} If the request fails (e.g., 422 validation error)
    */
   async createKey(
     entitySlug: string,
@@ -174,8 +218,15 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Update an LLM API key
+   * Update an LLM API key.
    * PUT /api/v1/entities/:entitySlug/keys/:keyId
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param keyId - UUID of the LLM API key to update
+   * @param data - Partial key update payload (e.g., key_name, api_key, is_active)
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the updated key
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async updateKey(
     entitySlug: string,
@@ -201,8 +252,14 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Delete an LLM API key
+   * Delete an LLM API key.
    * DELETE /api/v1/entities/:entitySlug/keys/:keyId
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param keyId - UUID of the LLM API key to delete
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the deleted key data
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async deleteKey(
     entitySlug: string,
@@ -232,8 +289,13 @@ export class ShapeshyftClient {
   // =============================================================================
 
   /**
-   * Get storage configuration for an entity
+   * Get storage configuration for an entity.
    * GET /api/v1/entities/:entitySlug/storage
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the entity's storage configuration
+   * @throws {ShapeshyftApiError} If the request fails (404 if no config exists)
    */
   async getStorageConfig(
     entitySlug: string,
@@ -258,8 +320,14 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Create or update storage configuration
+   * Create or update storage configuration for an entity.
    * POST /api/v1/entities/:entitySlug/storage
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param data - Storage configuration creation payload
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the created/updated storage configuration
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async createStorageConfig(
     entitySlug: string,
@@ -286,8 +354,14 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Update storage configuration (partial update)
+   * Update storage configuration (partial update).
    * PUT /api/v1/entities/:entitySlug/storage
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param data - Partial storage configuration update payload
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the updated storage configuration
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async updateStorageConfig(
     entitySlug: string,
@@ -314,8 +388,13 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Delete storage configuration
+   * Delete storage configuration for an entity.
    * DELETE /api/v1/entities/:entitySlug/storage
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the deleted storage configuration
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async deleteStorageConfig(
     entitySlug: string,
@@ -344,8 +423,14 @@ export class ShapeshyftClient {
   // =============================================================================
 
   /**
-   * Get all projects for an entity
+   * Get all projects for an entity.
    * GET /api/v1/entities/:entitySlug/projects
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param token - Firebase ID token for authentication
+   * @param params - Optional query parameters for filtering (e.g., is_active)
+   * @returns Response containing an array of project objects
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async getProjects(
     entitySlug: string,
@@ -370,8 +455,14 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Get a single project
+   * Get a single project by ID.
    * GET /api/v1/entities/:entitySlug/projects/:projectId
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param projectId - UUID of the project to retrieve
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the project object
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async getProject(
     entitySlug: string,
@@ -395,8 +486,14 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Create a new project
+   * Create a new project for an entity.
    * POST /api/v1/entities/:entitySlug/projects
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param data - Project creation payload including project_name and display_name
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the created project (includes generated UUID and API key prefix)
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async createProject(
     entitySlug: string,
@@ -421,8 +518,15 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Update a project
+   * Update a project.
    * PUT /api/v1/entities/:entitySlug/projects/:projectId
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param projectId - UUID of the project to update
+   * @param data - Partial project update payload (e.g., display_name, description, is_active)
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the updated project
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async updateProject(
     entitySlug: string,
@@ -448,8 +552,14 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Delete a project
+   * Delete a project.
    * DELETE /api/v1/entities/:entitySlug/projects/:projectId
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param projectId - UUID of the project to delete
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the deleted project data
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async deleteProject(
     entitySlug: string,
@@ -473,8 +583,14 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Get project API key (full key)
+   * Get project API key (full key value). Used for AI endpoint authentication.
    * GET /api/v1/entities/:entitySlug/projects/:projectId/api-key
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param projectId - UUID of the project
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the full API key string
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async getProjectApiKey(
     entitySlug: string,
@@ -500,8 +616,14 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Refresh project API key (generates new key)
+   * Refresh project API key (generates a new key, invalidating the old one).
    * POST /api/v1/entities/:entitySlug/projects/:projectId/api-key/refresh
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param projectId - UUID of the project whose API key to refresh
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the new API key, prefix, and creation timestamp
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async refreshProjectApiKey(
     entitySlug: string,
@@ -532,8 +654,15 @@ export class ShapeshyftClient {
   // =============================================================================
 
   /**
-   * Get all endpoints for a project
+   * Get all endpoints for a project.
    * GET /api/v1/entities/:entitySlug/projects/:projectId/endpoints
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param projectId - UUID of the project
+   * @param token - Firebase ID token for authentication
+   * @param params - Optional query parameters for filtering (e.g., is_active)
+   * @returns Response containing an array of endpoint objects
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async getEndpoints(
     entitySlug: string,
@@ -559,8 +688,15 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Get a single endpoint
+   * Get a single endpoint by ID.
    * GET /api/v1/entities/:entitySlug/projects/:projectId/endpoints/:endpointId
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param projectId - UUID of the project
+   * @param endpointId - UUID of the endpoint to retrieve
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the endpoint object
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async getEndpoint(
     entitySlug: string,
@@ -585,8 +721,15 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Create a new endpoint
+   * Create a new endpoint for a project.
    * POST /api/v1/entities/:entitySlug/projects/:projectId/endpoints
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param projectId - UUID of the project
+   * @param data - Endpoint creation payload including endpoint_name, display_name, and llm_key_id
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the created endpoint
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async createEndpoint(
     entitySlug: string,
@@ -612,8 +755,16 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Update an endpoint
+   * Update an endpoint.
    * PUT /api/v1/entities/:entitySlug/projects/:projectId/endpoints/:endpointId
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param projectId - UUID of the project
+   * @param endpointId - UUID of the endpoint to update
+   * @param data - Partial endpoint update payload (e.g., display_name, instructions, ip_allowlist)
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the updated endpoint
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async updateEndpoint(
     entitySlug: string,
@@ -640,8 +791,15 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Delete an endpoint
+   * Delete an endpoint.
    * DELETE /api/v1/entities/:entitySlug/projects/:projectId/endpoints/:endpointId
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param projectId - UUID of the project
+   * @param endpointId - UUID of the endpoint to delete
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the deleted endpoint data
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async deleteEndpoint(
     entitySlug: string,
@@ -670,8 +828,14 @@ export class ShapeshyftClient {
   // =============================================================================
 
   /**
-   * Get usage analytics for a user
+   * Get usage analytics for a user.
    * GET /api/v1/users/:userId/analytics
+   *
+   * @param userId - Firebase UID of the user
+   * @param token - Firebase ID token for authentication
+   * @param params - Optional query parameters (e.g., start_date, end_date, project_id)
+   * @returns Response containing aggregated analytics (summary, by_endpoint, by_date)
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async getAnalytics(
     userId: string,
@@ -702,8 +866,13 @@ export class ShapeshyftClient {
   // =============================================================================
 
   /**
-   * Get user settings
+   * Get user settings.
    * GET /api/v1/users/:userId/settings
+   *
+   * @param userId - Firebase UID of the user
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the user's settings object
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async getSettings(
     userId: string,
@@ -726,8 +895,14 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Update user settings (upsert)
+   * Update user settings (upsert -- creates if not exists).
    * PUT /api/v1/users/:userId/settings
+   *
+   * @param userId - Firebase UID of the user
+   * @param data - Partial settings update payload (e.g., default_organization)
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the updated settings object
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async updateSettings(
     userId: string,
@@ -756,8 +931,18 @@ export class ShapeshyftClient {
   // =============================================================================
 
   /**
-   * Execute AI endpoint via GET (for simple inputs)
+   * Execute AI endpoint via GET (for simple inputs).
+   * Input is JSON-serialized as a query parameter.
    * GET /api/v1/ai/:organizationPath/:projectName/:endpointName
+   *
+   * @param organizationPath - Organization slug used in the AI URL path
+   * @param projectName - Project name (project_name field, not UUID)
+   * @param endpointName - Endpoint name (endpoint_name field, not UUID)
+   * @param input - Input data to pass to the endpoint (serialized to JSON query param)
+   * @param apiKey - Optional project API key for authentication (omit for public endpoints)
+   * @param timeout - Optional request timeout in milliseconds
+   * @returns Response containing execution result or prompt response
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async executeAiGet(
     organizationPath: string,
@@ -788,8 +973,18 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Execute AI endpoint via POST (for complex inputs)
+   * Execute AI endpoint via POST (for complex inputs).
+   * Input is sent as the JSON request body.
    * POST /api/v1/ai/:organizationPath/:projectName/:endpointName
+   *
+   * @param organizationPath - Organization slug used in the AI URL path
+   * @param projectName - Project name (project_name field, not UUID)
+   * @param endpointName - Endpoint name (endpoint_name field, not UUID)
+   * @param input - Input data to pass to the endpoint as the request body
+   * @param apiKey - Optional project API key for authentication (omit for public endpoints)
+   * @param timeout - Optional request timeout in milliseconds
+   * @returns Response containing execution result or prompt response
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async executeAiPost(
     organizationPath: string,
@@ -819,7 +1014,17 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Execute AI endpoint (auto-selects GET or POST based on method parameter)
+   * Execute AI endpoint (auto-selects GET or POST based on the method parameter).
+   *
+   * @param organizationPath - Organization slug used in the AI URL path
+   * @param projectName - Project name (project_name field, not UUID)
+   * @param endpointName - Endpoint name (endpoint_name field, not UUID)
+   * @param input - Input data to pass to the endpoint
+   * @param method - HTTP method to use; defaults to "POST"
+   * @param apiKey - Optional project API key for authentication
+   * @param timeout - Optional request timeout in milliseconds
+   * @returns Response containing execution result or prompt response
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async executeAi(
     organizationPath: string,
@@ -851,8 +1056,18 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Get AI prompt without executing (for debugging/preview)
+   * Get AI prompt without executing (for debugging/preview).
+   * Returns the fully-resolved prompt that would be sent to the LLM.
    * POST /api/v1/ai/:organizationPath/:projectName/:endpointName/prompt
+   *
+   * @param organizationPath - Organization slug used in the AI URL path
+   * @param projectName - Project name (project_name field, not UUID)
+   * @param endpointName - Endpoint name (endpoint_name field, not UUID)
+   * @param input - Input data to pass to the endpoint
+   * @param apiKey - Optional project API key for authentication
+   * @param timeout - Optional request timeout in milliseconds
+   * @returns Response containing the resolved prompt (without LLM execution)
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async getAiPrompt(
     organizationPath: string,
@@ -886,8 +1101,12 @@ export class ShapeshyftClient {
   // =============================================================================
 
   /**
-   * Get all entities for the current user
+   * Get all entities (organizations) the current user belongs to.
    * GET /api/v1/entities
+   *
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing an array of entities with the user's role in each
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async getEntities(
     token: FirebaseIdToken
@@ -906,8 +1125,13 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Get a single entity by slug
+   * Get a single entity by slug.
    * GET /api/v1/entities/:entitySlug
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the entity with the user's role
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async getEntity(
     entitySlug: string,
@@ -930,8 +1154,13 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Create a new organization entity
+   * Create a new organization entity.
    * POST /api/v1/entities
+   *
+   * @param data - Entity creation payload including display_name and slug
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the created entity
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async createEntity(
     data: CreateEntityRequest,
@@ -953,8 +1182,14 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Update an entity
+   * Update an entity.
    * PUT /api/v1/entities/:entitySlug
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param data - Partial entity update payload (e.g., display_name)
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the updated entity
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async updateEntity(
     entitySlug: string,
@@ -979,8 +1214,13 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Delete an entity
+   * Delete an entity.
    * DELETE /api/v1/entities/:entitySlug
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param token - Firebase ID token for authentication
+   * @returns Response confirming deletion
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async deleteEntity(
     entitySlug: string,
@@ -1007,8 +1247,13 @@ export class ShapeshyftClient {
   // =============================================================================
 
   /**
-   * Get all members of an entity
+   * Get all members of an entity.
    * GET /api/v1/entities/:entitySlug/members
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing an array of entity members with their roles
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async getEntityMembers(
     entitySlug: string,
@@ -1031,8 +1276,15 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Update a member's role
+   * Update a member's role within an entity.
    * PUT /api/v1/entities/:entitySlug/members/:memberId
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param memberId - UUID of the member to update
+   * @param role - New role to assign (e.g., "owner", "admin", "member")
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the updated member
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async updateEntityMemberRole(
     entitySlug: string,
@@ -1058,8 +1310,14 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Remove a member from an entity
+   * Remove a member from an entity.
    * DELETE /api/v1/entities/:entitySlug/members/:memberId
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param memberId - UUID of the member to remove
+   * @param token - Firebase ID token for authentication
+   * @returns Response confirming removal
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async removeEntityMember(
     entitySlug: string,
@@ -1087,8 +1345,13 @@ export class ShapeshyftClient {
   // =============================================================================
 
   /**
-   * Get all invitations for an entity
+   * Get all invitations for an entity.
    * GET /api/v1/entities/:entitySlug/invitations
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing an array of pending invitations
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async getEntityInvitations(
     entitySlug: string,
@@ -1113,8 +1376,14 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Create an invitation to join an entity
+   * Create an invitation to join an entity.
    * POST /api/v1/entities/:entitySlug/invitations
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param data - Invitation payload including email and role
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the created invitation
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async createEntityInvitation(
     entitySlug: string,
@@ -1141,8 +1410,14 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Cancel an invitation
+   * Cancel a pending invitation.
    * DELETE /api/v1/entities/:entitySlug/invitations/:invitationId
+   *
+   * @param entitySlug - URL-safe slug identifying the entity
+   * @param invitationId - UUID of the invitation to cancel
+   * @param token - Firebase ID token for authentication
+   * @returns Response confirming cancellation
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async cancelEntityInvitation(
     entitySlug: string,
@@ -1166,8 +1441,12 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Get pending invitations for the current user
+   * Get pending invitations for the current user.
    * GET /api/v1/invitations
+   *
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing an array of invitations addressed to the current user
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async getMyInvitations(
     token: FirebaseIdToken
@@ -1186,8 +1465,13 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Accept an invitation
+   * Accept an invitation to join an entity.
    * POST /api/v1/invitations/:token/accept
+   *
+   * @param invitationToken - Unique invitation token (not to be confused with Firebase ID token)
+   * @param token - Firebase ID token for authentication
+   * @returns Response confirming acceptance
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async acceptInvitation(
     invitationToken: string,
@@ -1211,8 +1495,13 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Decline an invitation
+   * Decline an invitation to join an entity.
    * POST /api/v1/invitations/:token/decline
+   *
+   * @param invitationToken - Unique invitation token
+   * @param token - Firebase ID token for authentication
+   * @returns Response confirming the invitation was declined
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async declineInvitation(
     invitationToken: string,
@@ -1302,8 +1591,11 @@ export class ShapeshyftClient {
   // =============================================================================
 
   /**
-   * Get all available LLM providers
+   * Get all available LLM providers. Public endpoint -- no authentication required.
    * GET /api/v1/providers
+   *
+   * @returns Response containing an array of provider configurations
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async getProviders(): Promise<BaseResponse<ProviderConfig[]>> {
     const headers = createHeaders();
@@ -1320,8 +1612,12 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Get a specific provider's configuration
+   * Get a specific provider's configuration. Public endpoint -- no authentication required.
    * GET /api/v1/providers/:provider
+   *
+   * @param provider - LLM provider identifier (e.g., "openai", "anthropic")
+   * @returns Response containing the provider configuration
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async getProvider(
     provider: LlmProvider
@@ -1343,8 +1639,13 @@ export class ShapeshyftClient {
   }
 
   /**
-   * Get models for a specific provider with capabilities and pricing
+   * Get models for a specific provider with capabilities and pricing.
+   * Public endpoint -- no authentication required.
    * GET /api/v1/providers/:provider/models
+   *
+   * @param provider - LLM provider identifier (e.g., "openai", "anthropic")
+   * @returns Response containing the provider info and array of available models
+   * @throws {ShapeshyftApiError} If the request fails
    */
   async getProviderModels(
     provider: LlmProvider

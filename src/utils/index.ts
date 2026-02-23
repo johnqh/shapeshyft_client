@@ -1,4 +1,5 @@
 export {
+  ShapeshyftApiError,
   createAuthHeaders,
   createHeaders,
   buildUrl,

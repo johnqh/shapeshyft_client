@@ -1,6 +1,52 @@
 import type { FirebaseIdToken } from '../types';
 
 /**
+ * Typed error class for ShapeShyft API errors.
+ * Provides structured error information including HTTP status code,
+ * API error code, and detail message so consumers can handle different
+ * error types programmatically (e.g., redirect to login on 401).
+ *
+ * @example
+ * ```typescript
+ * try {
+ *   await client.getKeys(entitySlug, token);
+ * } catch (err) {
+ *   if (err instanceof ShapeshyftApiError) {
+ *     if (err.statusCode === 401) {
+ *       // redirect to login
+ *     } else if (err.statusCode === 404) {
+ *       // show not found message
+ *     }
+ *     console.error(`[${err.statusCode}] ${err.errorCode}: ${err.message}`);
+ *   }
+ * }
+ * ```
+ */
+export class ShapeshyftApiError extends Error {
+  /** HTTP status code from the API response (e.g., 401, 403, 404, 422, 500) */
+  readonly statusCode: number | undefined;
+  /** Machine-readable error code from the API response, if provided */
+  readonly errorCode: string | undefined;
+  /** Additional error details from the API response */
+  readonly details: string | undefined;
+
+  constructor(
+    message: string,
+    options?: {
+      statusCode?: number;
+      errorCode?: string;
+      details?: string;
+    }
+  ) {
+    super(message);
+    this.name = 'ShapeshyftApiError';
+    this.statusCode = options?.statusCode;
+    this.errorCode = options?.errorCode;
+    this.details = options?.details;
+  }
+}
+
+/**
  * Helper method to create authentication headers for Firebase-protected endpoints
  */
 export function createAuthHeaders(
@@ -44,13 +90,35 @@ export function buildUrl(baseUrl: string, path: string): string {
 }
 
 /**
- * Helper method to handle API errors
+ * Helper method to handle API errors.
+ * Extracts error information from the API response and returns a typed
+ * {@link ShapeshyftApiError} with status code, error code, and details
+ * when available.
+ *
+ * @param response - The raw response object from the network client
+ * @param operation - A human-readable description of the operation that failed (e.g., "get keys")
+ * @returns A {@link ShapeshyftApiError} instance with structured error information
  */
-export function handleApiError(response: unknown, operation: string): Error {
-  const resp = response as { data?: { error?: string; message?: string } };
+export function handleApiError(
+  response: unknown,
+  operation: string
+): ShapeshyftApiError {
+  const resp = response as {
+    status?: number;
+    data?: {
+      error?: string;
+      message?: string;
+      code?: string;
+      details?: string;
+    };
+  };
   const errorMessage =
     resp?.data?.error || resp?.data?.message || 'Unknown error';
-  return new Error(`Failed to ${operation}: ${errorMessage}`);
+  return new ShapeshyftApiError(`Failed to ${operation}: ${errorMessage}`, {
+    statusCode: resp?.status,
+    errorCode: resp?.data?.code,
+    details: resp?.data?.details,
+  });
 }
 
 /**

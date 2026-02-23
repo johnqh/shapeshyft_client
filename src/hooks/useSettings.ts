@@ -12,25 +12,53 @@ import { ShapeshyftClient } from '../network/ShapeshyftClient';
 import { QUERY_KEYS } from '../types';
 
 /**
- * Return type for useSettings hook
+ * Return type for the {@link useSettings} hook.
  */
 export interface UseSettingsReturn {
+  /** Current user settings, or null while loading */
   settings: Optional<UserSettings>;
+  /** True while any query or mutation is in progress */
   isLoading: boolean;
+  /** Error message from the most recent failed query or mutation, or null */
   error: Optional<string>;
 
+  /** Trigger a refetch of the settings from the server */
   refetch: () => void;
+  /** Update user settings (upsert). Directly updates the cache on success. */
   updateSettings: (
     data: UserSettingsUpdateRequest
   ) => Promise<BaseResponse<UserSettings>>;
 
+  /** Clear any mutation error state */
   clearError: () => void;
+  /** Remove all cached settings data and clear errors */
   reset: () => void;
 }
 
 /**
- * Hook for managing user settings
- * Uses TanStack Query for caching
+ * Hook for managing user settings.
+ * Uses TanStack Query for caching. Update mutations directly write to the cache on success.
+ *
+ * @param networkClient - NetworkClient instance for making HTTP requests
+ * @param baseUrl - Base URL of the ShapeShyft API
+ * @param userId - Firebase UID of the user, or null to disable fetching
+ * @param token - Firebase ID token for authentication, or null to disable fetching
+ * @param options - Optional configuration
+ * @param options.testMode - When true, appends testMode=true to all API requests
+ * @param options.enabled - When false, disables automatic fetching (default: true)
+ * @returns {@link UseSettingsReturn} with settings data, loading/error state, and update method
+ *
+ * @example
+ * ```tsx
+ * const { settings, updateSettings } = useSettings(
+ *   networkClient,
+ *   'https://api.shapeshyft.com',
+ *   userId,
+ *   firebaseToken
+ * );
+ *
+ * await updateSettings({ default_organization: 'my-org' });
+ * ```
  */
 export const useSettings = (
   networkClient: NetworkClient,

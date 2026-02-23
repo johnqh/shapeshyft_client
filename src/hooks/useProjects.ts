@@ -19,35 +19,73 @@ import { QUERY_KEYS } from '../types';
 const EMPTY_PROJECTS: Project[] = [];
 
 /**
- * Return type for useProjects hook
+ * Return type for the {@link useProjects} hook.
  */
 export interface UseProjectsReturn {
+  /** Array of projects for the current entity (empty array while loading or on error) */
   projects: Project[];
+  /** True while any query or mutation is in progress */
   isLoading: boolean;
+  /** Error message from the most recent failed query or mutation, or null */
   error: Optional<string>;
 
+  /** Trigger a refetch of the projects list from the server */
   refetch: () => void;
+  /** Fetch a single project by ID. Returns a BaseResponse (does not throw on error). */
   getProject: (projectId: string) => Promise<BaseResponse<Project>>;
+  /** Create a new project. Automatically invalidates the projects list on success. */
   createProject: (data: ProjectCreateRequest) => Promise<BaseResponse<Project>>;
+  /** Update an existing project. Automatically invalidates the projects list on success. */
   updateProject: (
     projectId: string,
     data: ProjectUpdateRequest
   ) => Promise<BaseResponse<Project>>;
+  /** Delete a project. Automatically invalidates the projects list on success. */
   deleteProject: (projectId: string) => Promise<BaseResponse<Project>>;
+  /** Fetch the full API key for a project. Returns a BaseResponse (does not throw on error). */
   getProjectApiKey: (
     projectId: string
   ) => Promise<BaseResponse<GetApiKeyResponse>>;
+  /** Generate a new API key for a project (invalidates the old one). */
   refreshProjectApiKey: (
     projectId: string
   ) => Promise<BaseResponse<RefreshApiKeyResponse>>;
 
+  /** Clear any mutation error state */
   clearError: () => void;
+  /** Remove all cached query data and clear errors */
   reset: () => void;
 }
 
 /**
- * Hook for managing projects
- * Uses TanStack Query for caching with automatic refresh after mutations
+ * Hook for managing projects.
+ * Uses TanStack Query for caching with automatic refresh after mutations.
+ *
+ * @param networkClient - NetworkClient instance for making HTTP requests
+ * @param baseUrl - Base URL of the ShapeShyft API
+ * @param entitySlug - Entity slug to scope projects to, or null to disable fetching
+ * @param token - Firebase ID token for authentication, or null to disable fetching
+ * @param options - Optional configuration
+ * @param options.testMode - When true, appends testMode=true to all API requests
+ * @param options.enabled - When false, disables automatic fetching (default: true)
+ * @param options.params - Query parameters for filtering projects (e.g., is_active)
+ * @returns {@link UseProjectsReturn} with projects data, loading/error state, and CRUD methods
+ *
+ * @example
+ * ```tsx
+ * const { projects, createProject, getProjectApiKey } = useProjects(
+ *   networkClient,
+ *   'https://api.shapeshyft.com',
+ *   'my-org',
+ *   firebaseToken
+ * );
+ *
+ * // Create a project
+ * await createProject({ project_name: 'my-project', display_name: 'My Project' });
+ *
+ * // Get full API key for AI execution
+ * const { data } = await getProjectApiKey('project-uuid');
+ * ```
  */
 export const useProjects = (
   networkClient: NetworkClient,

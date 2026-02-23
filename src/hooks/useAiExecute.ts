@@ -16,13 +16,26 @@ import { ShapeshyftClient } from '../network/ShapeshyftClient';
 export type AiResult = AiExecutionResponse | AiPromptResponse;
 
 /**
- * Return type for useAiExecute hook
+ * Return type for the {@link useAiExecute} hook.
  */
 export interface UseAiExecuteReturn {
+  /** Result from the most recent successful execution, or null */
   result: Optional<AiResult>;
+  /** True while an execute or getPrompt call is in progress */
   isLoading: boolean;
+  /** Error message from the most recent failed execution, or null */
   error: Optional<string>;
 
+  /**
+   * Execute an AI endpoint. Each call is a mutation (not cached).
+   * @param organizationPath - Organization slug in the AI URL path
+   * @param projectName - Project name (not UUID)
+   * @param endpointName - Endpoint name (not UUID)
+   * @param input - Input data to pass to the endpoint
+   * @param method - HTTP method ("GET" or "POST"); defaults to "POST"
+   * @param apiKey - Optional project API key for authentication
+   * @param timeout - Optional request timeout in milliseconds
+   */
   execute: (
     organizationPath: string,
     projectName: string,
@@ -33,6 +46,15 @@ export interface UseAiExecuteReturn {
     timeout?: number
   ) => Promise<BaseResponse<AiResult>>;
 
+  /**
+   * Get the resolved prompt without executing (for debugging/preview).
+   * @param organizationPath - Organization slug in the AI URL path
+   * @param projectName - Project name (not UUID)
+   * @param endpointName - Endpoint name (not UUID)
+   * @param input - Input data to pass to the endpoint
+   * @param apiKey - Optional project API key for authentication
+   * @param timeout - Optional request timeout in milliseconds
+   */
   getPrompt: (
     organizationPath: string,
     projectName: string,
@@ -42,7 +64,9 @@ export interface UseAiExecuteReturn {
     timeout?: number
   ) => Promise<BaseResponse<AiPromptResponse>>;
 
+  /** Clear any execution error state */
   clearError: () => void;
+  /** Reset all state (result, errors) to initial values */
   reset: () => void;
 }
 
@@ -66,8 +90,34 @@ interface PromptParams {
 }
 
 /**
- * Hook for executing AI endpoints
- * Uses TanStack Query mutations (each execution is unique, not cached)
+ * Hook for executing AI endpoints.
+ * Uses TanStack Query mutations (each execution is unique, not cached).
+ *
+ * @param networkClient - NetworkClient instance for making HTTP requests
+ * @param baseUrl - Base URL of the ShapeShyft API
+ * @param testMode - When true, appends testMode=true to all API requests (default: false)
+ * @returns {@link UseAiExecuteReturn} with execute/getPrompt methods and result/loading/error state
+ *
+ * @example
+ * ```tsx
+ * const { execute, result, isLoading, error } = useAiExecute(
+ *   networkClient,
+ *   'https://api.shapeshyft.com'
+ * );
+ *
+ * // Execute an AI endpoint
+ * const response = await execute(
+ *   'my-org',           // organizationPath
+ *   'my-project',       // projectName
+ *   'summarize',        // endpointName
+ *   { text: 'Hello' },  // input
+ *   'POST',             // method (default)
+ *   'sk_live_...',      // apiKey (optional)
+ * );
+ *
+ * // Preview the prompt without executing
+ * const prompt = await getPrompt('my-org', 'my-project', 'summarize', { text: 'Hello' });
+ * ```
  */
 export const useAiExecute = (
   networkClient: NetworkClient,
