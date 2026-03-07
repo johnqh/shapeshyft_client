@@ -136,22 +136,6 @@ shapeshyft_lib (business logic, stores)
 shapeshyft_app (frontend)
 ```
 
-## Testing
-
-Uses Vitest with mock network client:
-
-```bash
-bun run test         # Single run
-bun run test:watch   # Watch mode
-```
-
-Test coverage includes:
-- Initial state verification
-- Data fetching and state updates
-- Error handling
-- Loading states
-- Callback memoization
-
 ## Workspace Context
 
 This project is part of the **ShapeShyft** multi-project workspace at the parent directory. See `../CLAUDE.md` for the full architecture, dependency graph, and build order.
