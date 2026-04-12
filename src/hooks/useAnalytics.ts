@@ -36,7 +36,7 @@ export interface UseAnalyticsReturn {
  *
  * @param networkClient - NetworkClient instance for making HTTP requests
  * @param baseUrl - Base URL of the ShapeShyft API
- * @param userId - Firebase UID of the user, or null to disable fetching
+ * @param entitySlug - Entity slug for the organization, or null to disable fetching
  * @param token - Firebase ID token for authentication, or null to disable fetching
  * @param options - Optional configuration
  * @param options.testMode - When true, appends testMode=true to all API requests
@@ -49,7 +49,7 @@ export interface UseAnalyticsReturn {
  * const { analytics, isLoading } = useAnalytics(
  *   networkClient,
  *   'https://api.shapeshyft.com',
- *   userId,
+ *   entitySlug,
  *   firebaseToken,
  *   { params: { start_date: '2024-01-01', end_date: '2024-12-31' } }
  * );
@@ -58,7 +58,7 @@ export interface UseAnalyticsReturn {
 export const useAnalytics = (
   networkClient: NetworkClient,
   baseUrl: string,
-  userId: string | null,
+  entitySlug: string | null,
   token: FirebaseIdToken | null,
   options?: {
     testMode?: boolean;
@@ -67,7 +67,7 @@ export const useAnalytics = (
   }
 ): UseAnalyticsReturn => {
   const testMode = options?.testMode ?? false;
-  const enabled = (options?.enabled ?? true) && !!userId && !!token;
+  const enabled = (options?.enabled ?? true) && !!entitySlug && !!token;
 
   const client = useMemo(
     () => new ShapeshyftClient({ baseUrl, networkClient, testMode }),
@@ -82,11 +82,11 @@ export const useAnalytics = (
     error: queryError,
     refetch,
   } = useQuery({
-    queryKey: QUERY_KEYS.analytics(userId ?? ''),
+    queryKey: QUERY_KEYS.analytics(entitySlug ?? ''),
     queryFn: async () => {
-      if (!userId || !token) throw new Error('Missing required params');
+      if (!entitySlug || !token) throw new Error('Missing required params');
       const response = await client.getAnalytics(
-        userId,
+        entitySlug,
         token,
         options?.params
       );
@@ -107,10 +107,10 @@ export const useAnalytics = (
   }, []);
 
   const reset = useCallback(() => {
-    if (userId) {
-      queryClient.resetQueries({ queryKey: QUERY_KEYS.analytics(userId) });
+    if (entitySlug) {
+      queryClient.resetQueries({ queryKey: QUERY_KEYS.analytics(entitySlug) });
     }
-  }, [queryClient, userId]);
+  }, [queryClient, entitySlug]);
 
   return useMemo(
     () => ({

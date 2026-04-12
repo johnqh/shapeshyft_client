@@ -31,7 +31,11 @@ describe('useEndpoints', () => {
 
   const createWrapper = () => {
     return ({ children }: { children: React.ReactNode }) =>
-      React.createElement(QueryClientProvider, { client: queryClient }, children);
+      React.createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        children
+      );
   };
 
   it('should initialize with empty state', () => {
@@ -72,7 +76,14 @@ describe('useEndpoints', () => {
       );
 
       const { result } = renderHook(
-        () => useEndpoints(mockNetworkClient, baseUrl, entitySlug, projectId, token),
+        () =>
+          useEndpoints(
+            mockNetworkClient,
+            baseUrl,
+            entitySlug,
+            projectId,
+            token
+          ),
         { wrapper: createWrapper() }
       );
 
@@ -92,7 +103,14 @@ describe('useEndpoints', () => {
       );
 
       const { result } = renderHook(
-        () => useEndpoints(mockNetworkClient, baseUrl, entitySlug, projectId, token),
+        () =>
+          useEndpoints(
+            mockNetworkClient,
+            baseUrl,
+            entitySlug,
+            projectId,
+            token
+          ),
         { wrapper: createWrapper() }
       );
 
@@ -113,7 +131,14 @@ describe('useEndpoints', () => {
       );
 
       const { result } = renderHook(
-        () => useEndpoints(mockNetworkClient, baseUrl, entitySlug, projectId, token),
+        () =>
+          useEndpoints(
+            mockNetworkClient,
+            baseUrl,
+            entitySlug,
+            projectId,
+            token
+          ),
         { wrapper: createWrapper() }
       );
 
@@ -159,7 +184,14 @@ describe('useEndpoints', () => {
       );
 
       const { result } = renderHook(
-        () => useEndpoints(mockNetworkClient, baseUrl, entitySlug, projectId, token),
+        () =>
+          useEndpoints(
+            mockNetworkClient,
+            baseUrl,
+            entitySlug,
+            projectId,
+            token
+          ),
         { wrapper: createWrapper() }
       );
 
@@ -208,7 +240,14 @@ describe('useEndpoints', () => {
       );
 
       const { result } = renderHook(
-        () => useEndpoints(mockNetworkClient, baseUrl, entitySlug, projectId, token),
+        () =>
+          useEndpoints(
+            mockNetworkClient,
+            baseUrl,
+            entitySlug,
+            projectId,
+            token
+          ),
         { wrapper: createWrapper() }
       );
 
@@ -258,7 +297,14 @@ describe('useEndpoints', () => {
       );
 
       const { result } = renderHook(
-        () => useEndpoints(mockNetworkClient, baseUrl, entitySlug, projectId, token),
+        () =>
+          useEndpoints(
+            mockNetworkClient,
+            baseUrl,
+            entitySlug,
+            projectId,
+            token
+          ),
         { wrapper: createWrapper() }
       );
 
@@ -268,7 +314,9 @@ describe('useEndpoints', () => {
       });
 
       await act(async () => {
-        await result.current.updateEndpoint('ep-1', { display_name: 'Updated Name' });
+        await result.current.updateEndpoint('ep-1', {
+          display_name: 'Updated Name',
+        });
       });
 
       expect(
@@ -298,7 +346,14 @@ describe('useEndpoints', () => {
       );
 
       const { result } = renderHook(
-        () => useEndpoints(mockNetworkClient, baseUrl, entitySlug, projectId, token),
+        () =>
+          useEndpoints(
+            mockNetworkClient,
+            baseUrl,
+            entitySlug,
+            projectId,
+            token
+          ),
         { wrapper: createWrapper() }
       );
 
@@ -336,7 +391,14 @@ describe('useEndpoints', () => {
       );
 
       const { result } = renderHook(
-        () => useEndpoints(mockNetworkClient, baseUrl, entitySlug, projectId, token),
+        () =>
+          useEndpoints(
+            mockNetworkClient,
+            baseUrl,
+            entitySlug,
+            projectId,
+            token
+          ),
         { wrapper: createWrapper() }
       );
 
@@ -367,7 +429,14 @@ describe('useEndpoints', () => {
       );
 
       const { result } = renderHook(
-        () => useEndpoints(mockNetworkClient, baseUrl, entitySlug, projectId, token),
+        () =>
+          useEndpoints(
+            mockNetworkClient,
+            baseUrl,
+            entitySlug,
+            projectId,
+            token
+          ),
         { wrapper: createWrapper() }
       );
 
@@ -401,7 +470,14 @@ describe('useEndpoints', () => {
       );
 
       const { result } = renderHook(
-        () => useEndpoints(mockNetworkClient, baseUrl, entitySlug, projectId, token),
+        () =>
+          useEndpoints(
+            mockNetworkClient,
+            baseUrl,
+            entitySlug,
+            projectId,
+            token
+          ),
         { wrapper: createWrapper() }
       );
 

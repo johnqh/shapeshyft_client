@@ -8,7 +8,7 @@ import { useAnalytics } from './useAnalytics';
 
 describe('useAnalytics', () => {
   const baseUrl = 'https://api.example.com';
-  const userId = 'user-123';
+  const entitySlug = 'my-org';
   const token = 'test-token';
   let mockNetworkClient: MockNetworkClient;
   let queryClient: QueryClient;
@@ -58,7 +58,11 @@ describe('useAnalytics', () => {
 
   const createWrapper = () => {
     return ({ children }: { children: React.ReactNode }) =>
-      React.createElement(QueryClientProvider, { client: queryClient }, children);
+      React.createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        children
+      );
   };
 
   it('should initialize with empty state', () => {
@@ -75,13 +79,13 @@ describe('useAnalytics', () => {
   describe('auto-fetch', () => {
     it('should fetch analytics and update state', async () => {
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/${userId}/analytics`,
+        `${baseUrl}/api/v1/entities/${entitySlug}/analytics`,
         { ok: true, data: { success: true, data: mockAnalyticsData } },
         'GET'
       );
 
       const { result } = renderHook(
-        () => useAnalytics(mockNetworkClient, baseUrl, userId, token),
+        () => useAnalytics(mockNetworkClient, baseUrl, entitySlug, token),
         { wrapper: createWrapper() }
       );
 
@@ -95,14 +99,14 @@ describe('useAnalytics', () => {
 
     it('should fetch analytics with query params', async () => {
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/${userId}/analytics?start_date=2024-01-01&end_date=2024-01-31`,
+        `${baseUrl}/api/v1/entities/${entitySlug}/analytics?start_date=2024-01-01&end_date=2024-01-31`,
         { ok: true, data: { success: true, data: mockAnalyticsData } },
         'GET'
       );
 
       const { result } = renderHook(
         () =>
-          useAnalytics(mockNetworkClient, baseUrl, userId, token, {
+          useAnalytics(mockNetworkClient, baseUrl, entitySlug, token, {
             params: {
               start_date: '2024-01-01',
               end_date: '2024-01-31',
@@ -117,7 +121,7 @@ describe('useAnalytics', () => {
 
       expect(
         mockNetworkClient.wasUrlCalled(
-          `${baseUrl}/api/v1/users/${userId}/analytics?start_date=2024-01-01&end_date=2024-01-31`,
+          `${baseUrl}/api/v1/entities/${entitySlug}/analytics?start_date=2024-01-01&end_date=2024-01-31`,
           'GET'
         )
       ).toBe(true);
@@ -125,13 +129,13 @@ describe('useAnalytics', () => {
 
     it('should set error on failed request', async () => {
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/${userId}/analytics`,
+        `${baseUrl}/api/v1/entities/${entitySlug}/analytics`,
         { ok: false, data: { success: false, error: 'Unauthorized' } },
         'GET'
       );
 
       const { result } = renderHook(
-        () => useAnalytics(mockNetworkClient, baseUrl, userId, token),
+        () => useAnalytics(mockNetworkClient, baseUrl, entitySlug, token),
         { wrapper: createWrapper() }
       );
 
@@ -144,13 +148,17 @@ describe('useAnalytics', () => {
 
     it('should set isLoading during request', async () => {
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/${userId}/analytics`,
-        { ok: true, data: { success: true, data: mockAnalyticsData }, delay: 100 },
+        `${baseUrl}/api/v1/entities/${entitySlug}/analytics`,
+        {
+          ok: true,
+          data: { success: true, data: mockAnalyticsData },
+          delay: 100,
+        },
         'GET'
       );
 
       const { result } = renderHook(
-        () => useAnalytics(mockNetworkClient, baseUrl, userId, token),
+        () => useAnalytics(mockNetworkClient, baseUrl, entitySlug, token),
         { wrapper: createWrapper() }
       );
 
@@ -163,13 +171,13 @@ describe('useAnalytics', () => {
 
     it('should handle network errors', async () => {
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/${userId}/analytics`,
+        `${baseUrl}/api/v1/entities/${entitySlug}/analytics`,
         { error: new Error('Network error') },
         'GET'
       );
 
       const { result } = renderHook(
-        () => useAnalytics(mockNetworkClient, baseUrl, userId, token),
+        () => useAnalytics(mockNetworkClient, baseUrl, entitySlug, token),
         { wrapper: createWrapper() }
       );
 
@@ -180,13 +188,13 @@ describe('useAnalytics', () => {
 
     it('should handle response without data', async () => {
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/${userId}/analytics`,
+        `${baseUrl}/api/v1/entities/${entitySlug}/analytics`,
         { ok: true, data: { success: true } },
         'GET'
       );
 
       const { result } = renderHook(
-        () => useAnalytics(mockNetworkClient, baseUrl, userId, token),
+        () => useAnalytics(mockNetworkClient, baseUrl, entitySlug, token),
         { wrapper: createWrapper() }
       );
 
@@ -199,13 +207,13 @@ describe('useAnalytics', () => {
   describe('reset', () => {
     it('should reset all state', async () => {
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/${userId}/analytics`,
+        `${baseUrl}/api/v1/entities/${entitySlug}/analytics`,
         { ok: true, data: { success: true, data: mockAnalyticsData } },
         'GET'
       );
 
       const { result } = renderHook(
-        () => useAnalytics(mockNetworkClient, baseUrl, userId, token),
+        () => useAnalytics(mockNetworkClient, baseUrl, entitySlug, token),
         { wrapper: createWrapper() }
       );
 
@@ -226,7 +234,7 @@ describe('useAnalytics', () => {
         by_date: [],
       };
       mockNetworkClient.setMockResponse(
-        `${baseUrl}/api/v1/users/${userId}/analytics`,
+        `${baseUrl}/api/v1/entities/${entitySlug}/analytics`,
         { ok: true, data: { success: true, data: emptyAnalytics } },
         'GET'
       );

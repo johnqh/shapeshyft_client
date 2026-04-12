@@ -400,7 +400,7 @@ describe('ShapeshyftClient', () => {
   // =============================================================================
 
   describe('Analytics', () => {
-    const userId = 'user-123';
+    const entitySlug = 'my-org';
     const token = 'firebase-token';
 
     describe('getAnalytics', () => {
@@ -422,10 +422,10 @@ describe('ShapeshyftClient', () => {
           data: { success: true, data: mockAnalytics },
         });
 
-        const result = await client.getAnalytics(userId, token);
+        const result = await client.getAnalytics(entitySlug, token);
 
         expect(mockNetworkClient.get).toHaveBeenCalledWith(
-          `${baseUrl}/api/v1/users/${userId}/analytics`,
+          `${baseUrl}/api/v1/entities/${entitySlug}/analytics`,
           expect.any(Object)
         );
         expect(result.data).toEqual(mockAnalytics);
@@ -437,7 +437,7 @@ describe('ShapeshyftClient', () => {
           data: { success: true, data: { aggregate: {}, by_endpoint: [] } },
         });
 
-        await client.getAnalytics(userId, token, {
+        await client.getAnalytics(entitySlug, token, {
           start_date: '2024-01-01',
           end_date: '2024-12-31',
         });
@@ -1313,14 +1313,7 @@ describe('ShapeshyftClient', () => {
         data: { success: true, data: {} },
       });
 
-      await client.executeAiPost(
-        'org',
-        'proj',
-        'ep',
-        {},
-        'key',
-        30000
-      );
+      await client.executeAiPost('org', 'proj', 'ep', {}, 'key', 30000);
 
       expect(mockNetworkClient.post).toHaveBeenCalledWith(
         expect.any(String),

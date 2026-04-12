@@ -828,17 +828,17 @@ export class ShapeshyftClient {
   // =============================================================================
 
   /**
-   * Get usage analytics for a user.
-   * GET /api/v1/users/:userId/analytics
+   * Get usage analytics for an entity.
+   * GET /api/v1/entities/:entitySlug/analytics
    *
-   * @param userId - Firebase UID of the user
+   * @param entitySlug - Entity slug for the organization
    * @param token - Firebase ID token for authentication
    * @param params - Optional query parameters (e.g., start_date, end_date, project_id)
    * @returns Response containing aggregated analytics (summary, by_endpoint, by_date)
    * @throws {ShapeshyftApiError} If the request fails
    */
   async getAnalytics(
-    userId: string,
+    entitySlug: string,
     token: FirebaseIdToken,
     params?: UsageAnalyticsQueryParams
   ): Promise<BaseResponse<AnalyticsResponse>> {
@@ -848,7 +848,7 @@ export class ShapeshyftClient {
       BaseResponse<AnalyticsResponse>
     >(
       this.buildUrlWithTestMode(
-        `/api/v1/users/${encodeURIComponent(userId)}/analytics`,
+        `/api/v1/entities/${encodeURIComponent(entitySlug)}/analytics`,
         params
       ),
       { headers }
@@ -1564,7 +1564,7 @@ export class ShapeshyftClient {
    * @param entitySlug - Entity slug for rate limit lookup (used as rateLimitUserId path param)
    */
   async getRateLimitHistory(
-    periodType: RateLimitPeriodType | 'hour' | 'day' | 'month',
+    periodType: RateLimitPeriodType,
     token: FirebaseIdToken,
     entitySlug: string
   ): Promise<BaseResponse<RateLimitHistoryData>> {

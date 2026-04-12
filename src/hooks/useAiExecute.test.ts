@@ -26,7 +26,11 @@ describe('useAiExecute', () => {
 
   const createWrapper = () => {
     return ({ children }: { children: React.ReactNode }) =>
-      React.createElement(QueryClientProvider, { client: queryClient }, children);
+      React.createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        children
+      );
   };
 
   it('should initialize with empty state', () => {
@@ -185,7 +189,12 @@ describe('useAiExecute', () => {
 
       let executePromise: Promise<unknown>;
       act(() => {
-        executePromise = result.current.execute('org', 'project', 'endpoint', {});
+        executePromise = result.current.execute(
+          'org',
+          'project',
+          'endpoint',
+          {}
+        );
       });
 
       await waitFor(() => {

@@ -22,7 +22,8 @@ export const QUERY_KEYS = {
     ['shapeshyft', 'endpoints', entitySlug, projectId] as const,
   endpoint: (entitySlug: string, projectId: string, endpointId: string) =>
     ['shapeshyft', 'endpoints', entitySlug, projectId, endpointId] as const,
-  analytics: (userId: string) => ['shapeshyft', 'analytics', userId] as const,
+  analytics: (entitySlug: string) =>
+    ['shapeshyft', 'analytics', entitySlug] as const,
   settings: (userId: string) => ['shapeshyft', 'settings', userId] as const,
   storageConfig: (entitySlug: string) =>
     ['shapeshyft', 'storageConfig', entitySlug] as const,
