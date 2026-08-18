@@ -40,7 +40,14 @@ import type {
   RateLimitsConfigData,
   UpdateEntityRequest,
 } from '@sudobility/types';
-import type { FirebaseIdToken } from '../types';
+import type {
+  CurrentUser,
+  FirebaseIdToken,
+  UserApiKey,
+  UserApiKeyCreated,
+  UserApiKeyCreateRequest,
+  UserApiKeyUpdateRequest,
+} from '../types';
 import {
   buildQueryString,
   buildUrl,
@@ -889,6 +896,205 @@ export class ShapeshyftClient {
 
     if (!response.ok || !response.data) {
       throw handleApiError(response, 'get settings');
+    }
+
+    return response.data;
+  }
+
+  // ===========================================================================
+  // PERSONAL API KEYS (Firebase auth required for create/reveal)
+  // ===========================================================================
+
+  /**
+   * Identify the authenticated caller.
+   * GET /api/v1/users/me
+   *
+   * Works with either credential, and is the only way an API-key client can
+   * learn its own Firebase UID -- which every /users/:userId/* route needs.
+   *
+   * @param token - Firebase ID token, or a personal API key
+   * @returns Response containing the caller's identity and auth method
+   * @throws {ShapeshyftApiError} If the request fails
+   */
+  async getCurrentUser(
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<CurrentUser>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.get<BaseResponse<CurrentUser>>(
+      this.buildUrlWithTestMode('/api/v1/users/me'),
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'get current user');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * List the user's personal API keys. Secrets are never included.
+   * GET /api/v1/users/:userId/api-keys
+   *
+   * @param userId - Firebase UID of the user
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the key metadata, newest first
+   * @throws {ShapeshyftApiError} If the request fails
+   */
+  async getUserApiKeys(
+    userId: string,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<UserApiKey[]>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.get<BaseResponse<UserApiKey[]>>(
+      this.buildUrlWithTestMode(
+        `/api/v1/users/${encodeURIComponent(userId)}/api-keys`
+      ),
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'get user API keys');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Create a personal API key. The full `shyft_...` value is returned once,
+   * here -- store it immediately.
+   * POST /api/v1/users/:userId/api-keys
+   *
+   * Requires a Firebase ID token: a request authenticated with an API key
+   * cannot mint further keys.
+   *
+   * @param userId - Firebase UID of the user
+   * @param data - Creation payload containing the key name
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the key metadata plus the secret
+   * @throws {ShapeshyftApiError} If the request fails (403 when authenticated by API key)
+   */
+  async createUserApiKey(
+    userId: string,
+    data: UserApiKeyCreateRequest,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<UserApiKeyCreated>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.post<
+      BaseResponse<UserApiKeyCreated>
+    >(
+      this.buildUrlWithTestMode(
+        `/api/v1/users/${encodeURIComponent(userId)}/api-keys`
+      ),
+      data,
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'create user API key');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Reveal an existing personal API key so it can be copied again.
+   * GET /api/v1/users/:userId/api-keys/:keyId/reveal
+   *
+   * Requires a Firebase ID token.
+   *
+   * @param userId - Firebase UID of the user
+   * @param keyId - UUID of the key to reveal
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the full key
+   * @throws {ShapeshyftApiError} If the request fails
+   */
+  async revealUserApiKey(
+    userId: string,
+    keyId: string,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<{ api_key: string }>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.get<
+      BaseResponse<{ api_key: string }>
+    >(
+      this.buildUrlWithTestMode(
+        `/api/v1/users/${encodeURIComponent(userId)}/api-keys/${encodeURIComponent(keyId)}/reveal`
+      ),
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'reveal user API key');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Rename a personal API key or toggle whether it is accepted.
+   * PUT /api/v1/users/:userId/api-keys/:keyId
+   *
+   * @param userId - Firebase UID of the user
+   * @param keyId - UUID of the key to update
+   * @param data - Partial update payload (key_name and/or is_active)
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the updated key metadata
+   * @throws {ShapeshyftApiError} If the request fails
+   */
+  async updateUserApiKey(
+    userId: string,
+    keyId: string,
+    data: UserApiKeyUpdateRequest,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<UserApiKey>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.put<BaseResponse<UserApiKey>>(
+      this.buildUrlWithTestMode(
+        `/api/v1/users/${encodeURIComponent(userId)}/api-keys/${encodeURIComponent(keyId)}`
+      ),
+      data,
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'update user API key');
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Permanently revoke a personal API key.
+   * DELETE /api/v1/users/:userId/api-keys/:keyId
+   *
+   * @param userId - Firebase UID of the user
+   * @param keyId - UUID of the key to delete
+   * @param token - Firebase ID token for authentication
+   * @returns Response containing the deleted key metadata
+   * @throws {ShapeshyftApiError} If the request fails
+   */
+  async deleteUserApiKey(
+    userId: string,
+    keyId: string,
+    token: FirebaseIdToken
+  ): Promise<BaseResponse<UserApiKey>> {
+    const headers = createAuthHeaders(token);
+
+    const response = await this.networkClient.delete<BaseResponse<UserApiKey>>(
+      this.buildUrlWithTestMode(
+        `/api/v1/users/${encodeURIComponent(userId)}/api-keys/${encodeURIComponent(keyId)}`
+      ),
+      { headers }
+    );
+
+    if (!response.ok || !response.data) {
+      throw handleApiError(response, 'delete user API key');
     }
 
     return response.data;

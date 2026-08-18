@@ -13,5 +13,12 @@ export * from './hooks';
 export * from './utils';
 
 // Local types
-export type { FirebaseIdToken } from './types';
+export type {
+  CurrentUser,
+  FirebaseIdToken,
+  UserApiKey,
+  UserApiKeyCreated,
+  UserApiKeyCreateRequest,
+  UserApiKeyUpdateRequest,
+} from './types';
 export { QUERY_KEYS } from './types';
