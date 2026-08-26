@@ -1,5 +1,10 @@
 # ShapeShyft Client
 
+> **Git policy — never auto-commit or auto-push.** Leave your work in the working tree.
+> Run `git commit`, `git push`, `gh pr create`, or `scripts/push_all.sh` **only when the user
+> explicitly asks in that turn**. Approval for an earlier change does not carry forward, and
+> finishing a task is not permission to commit it.
+
 React client library for ShapeShyft API with TanStack Query hooks (v0.0.74).
 
 **npm**: `@sudobility/shapeshyft_client`
@@ -386,3 +391,7 @@ npm publish             # Publish to npm (must use npm, not bun)
 - **`useProviderModels` uses `keepPreviousData`** -- prevents content flash when switching between providers.
 - **Stable empty arrays prevent re-renders** -- each hook has a module-level `EMPTY_X` constant. Do not inline `[]` as a default.
 - **Entity vs user scoping** -- keys/projects/endpoints/storage are entity-scoped; analytics/settings are user-scoped; providers are global.
+
+## Git Workflow
+
+- Do not use feature branches for code changes. Always stay on the current branch.
