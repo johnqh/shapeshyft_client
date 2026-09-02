@@ -513,6 +513,97 @@ describe('ShapeshyftClient', () => {
     const projectName = 'my-project';
     const endpointName = 'summarize';
 
+    describe('per-call output ceiling', () => {
+      it('should send max_output_tokens in the POST body', async () => {
+        vi.mocked(mockNetworkClient.post).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: {} },
+        });
+
+        await client.executeAiPost(
+          organizationPath,
+          projectName,
+          endpointName,
+          { text: 'test input' },
+          undefined,
+          undefined,
+          2000
+        );
+
+        expect(mockNetworkClient.post).toHaveBeenCalledWith(
+          expect.any(String),
+          { text: 'test input', max_output_tokens: 2000 },
+          expect.any(Object)
+        );
+      });
+
+      it('should leave the body untouched when no ceiling is given', async () => {
+        vi.mocked(mockNetworkClient.post).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: {} },
+        });
+
+        await client.executeAiPost(
+          organizationPath,
+          projectName,
+          endpointName,
+          { text: 'test input' }
+        );
+
+        expect(mockNetworkClient.post).toHaveBeenCalledWith(
+          expect.any(String),
+          { text: 'test input' },
+          expect.any(Object)
+        );
+      });
+
+      it('should send max_output_tokens as a GET query parameter', async () => {
+        vi.mocked(mockNetworkClient.get).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: {} },
+        });
+
+        await client.executeAiGet(
+          organizationPath,
+          projectName,
+          endpointName,
+          { text: 'test input' },
+          undefined,
+          undefined,
+          2000
+        );
+
+        expect(mockNetworkClient.get).toHaveBeenCalledWith(
+          expect.stringContaining('max_output_tokens=2000'),
+          expect.any(Object)
+        );
+      });
+
+      it('should route the ceiling through executeAi for both methods', async () => {
+        vi.mocked(mockNetworkClient.post).mockResolvedValue({
+          ok: true,
+          data: { success: true, data: {} },
+        });
+
+        await client.executeAi(
+          organizationPath,
+          projectName,
+          endpointName,
+          { text: 'hi' },
+          'POST',
+          undefined,
+          undefined,
+          1500
+        );
+
+        expect(mockNetworkClient.post).toHaveBeenCalledWith(
+          expect.any(String),
+          { text: 'hi', max_output_tokens: 1500 },
+          expect.any(Object)
+        );
+      });
+    });
+
     describe('executeAiGet', () => {
       it('should execute AI endpoint via GET', async () => {
         const mockResponse = {

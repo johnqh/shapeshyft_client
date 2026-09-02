@@ -35,6 +35,9 @@ export interface UseAiExecuteReturn {
    * @param method - HTTP method ("GET" or "POST"); defaults to "POST"
    * @param apiKey - Optional project API key for authentication
    * @param timeout - Optional request timeout in milliseconds
+   * @param maxOutputTokens - Optional per-call ceiling on generated tokens.
+   *   Clamped server-side to the endpoint's own limit, so it can only ever ask
+   *   for fewer tokens -- it cannot lift an operator's limit.
    */
   execute: (
     organizationPath: string,
@@ -43,7 +46,8 @@ export interface UseAiExecuteReturn {
     input: unknown,
     method?: HttpMethod,
     apiKey?: string,
-    timeout?: number
+    timeout?: number,
+    maxOutputTokens?: number
   ) => Promise<BaseResponse<AiResult>>;
 
   /**
@@ -78,6 +82,7 @@ interface ExecuteParams {
   method: HttpMethod;
   apiKey?: string;
   timeout?: number;
+  maxOutputTokens?: number;
 }
 
 interface PromptParams {
@@ -138,7 +143,8 @@ export const useAiExecute = (
         params.input,
         params.method,
         params.apiKey,
-        params.timeout
+        params.timeout,
+        params.maxOutputTokens
       );
     },
   });
@@ -164,7 +170,8 @@ export const useAiExecute = (
       input: unknown,
       method: HttpMethod = 'POST',
       apiKey?: string,
-      timeout?: number
+      timeout?: number,
+      maxOutputTokens?: number
     ) =>
       executeMutation.mutateAsync({
         organizationPath,
@@ -174,6 +181,7 @@ export const useAiExecute = (
         method,
         apiKey,
         timeout,
+        maxOutputTokens,
       }),
     [executeMutation]
   );

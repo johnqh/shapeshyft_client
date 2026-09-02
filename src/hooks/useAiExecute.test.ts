@@ -122,6 +122,33 @@ describe('useAiExecute', () => {
       ).toBe(false);
     });
 
+    it('should send a per-call output ceiling as a GET query parameter', async () => {
+      const { result } = renderHook(
+        () => useAiExecute(mockNetworkClient, baseUrl),
+        { wrapper: createWrapper() }
+      );
+
+      await act(async () => {
+        await result.current.execute(
+          'my-org',
+          'my-project',
+          'endpoint',
+          {},
+          'GET',
+          undefined,
+          undefined,
+          2000
+        );
+      });
+
+      expect(
+        mockNetworkClient.wasUrlCalled(
+          `${baseUrl}/api/v1/ai/my-org/my-project/endpoint?input=%7B%7D&max_output_tokens=2000`,
+          'GET'
+        )
+      ).toBe(true);
+    });
+
     it('should set error on failed execution', async () => {
       mockNetworkClient.setMockResponse(
         `${baseUrl}/api/v1/ai/org/project/endpoint`,

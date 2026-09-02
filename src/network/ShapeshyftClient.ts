@@ -1147,6 +1147,8 @@ export class ShapeshyftClient {
    * @param input - Input data to pass to the endpoint (serialized to JSON query param)
    * @param apiKey - Optional project API key for authentication (omit for public endpoints)
    * @param timeout - Optional request timeout in milliseconds
+   * @param maxOutputTokens - Optional per-call output ceiling. Clamped server-side
+   *   to the endpoint's own limit, so this can only ever request fewer tokens.
    * @returns Response containing execution result or prompt response
    * @throws {ShapeshyftApiError} If the request fails
    */
@@ -1156,10 +1158,16 @@ export class ShapeshyftClient {
     endpointName: string,
     input: unknown,
     apiKey?: string,
-    timeout?: number
+    timeout?: number,
+    maxOutputTokens?: number
   ): Promise<BaseResponse<AiExecutionResponse | AiPromptResponse>> {
     const headers = apiKey ? createApiKeyHeaders(apiKey) : createHeaders();
-    const inputParams = input ? { input: JSON.stringify(input) } : {};
+    const inputParams = {
+      ...(input ? { input: JSON.stringify(input) } : {}),
+      ...(maxOutputTokens !== undefined
+        ? { max_output_tokens: String(maxOutputTokens) }
+        : {}),
+    };
 
     const response = await this.networkClient.get<
       BaseResponse<AiExecutionResponse | AiPromptResponse>
@@ -1189,6 +1197,9 @@ export class ShapeshyftClient {
    * @param input - Input data to pass to the endpoint as the request body
    * @param apiKey - Optional project API key for authentication (omit for public endpoints)
    * @param timeout - Optional request timeout in milliseconds
+   * @param maxOutputTokens - Optional per-call output ceiling, merged into the
+   *   body as the reserved `max_output_tokens` field. Clamped server-side to the
+   *   endpoint's own limit, so this can only ever request fewer tokens.
    * @returns Response containing execution result or prompt response
    * @throws {ShapeshyftApiError} If the request fails
    */
@@ -1198,9 +1209,23 @@ export class ShapeshyftClient {
     endpointName: string,
     input: unknown,
     apiKey?: string,
-    timeout?: number
+    timeout?: number,
+    maxOutputTokens?: number
   ): Promise<BaseResponse<AiExecutionResponse | AiPromptResponse>> {
     const headers = apiKey ? createApiKeyHeaders(apiKey) : createHeaders();
+
+    // Merge rather than wrap: the API reads reserved fields off the top level of
+    // the body, alongside the endpoint's own input fields.
+    const body =
+      maxOutputTokens !== undefined &&
+      typeof input === 'object' &&
+      input !== null &&
+      !Array.isArray(input)
+        ? {
+            ...(input as Record<string, unknown>),
+            max_output_tokens: maxOutputTokens,
+          }
+        : input;
 
     const response = await this.networkClient.post<
       BaseResponse<AiExecutionResponse | AiPromptResponse>
@@ -1208,7 +1233,7 @@ export class ShapeshyftClient {
       this.buildUrlWithTestMode(
         `/api/v1/ai/${encodeURIComponent(organizationPath)}/${encodeURIComponent(projectName)}/${encodeURIComponent(endpointName)}`
       ),
-      input,
+      body,
       { headers, timeout }
     );
 
@@ -1229,6 +1254,8 @@ export class ShapeshyftClient {
    * @param method - HTTP method to use; defaults to "POST"
    * @param apiKey - Optional project API key for authentication
    * @param timeout - Optional request timeout in milliseconds
+   * @param maxOutputTokens - Optional per-call output ceiling. Clamped server-side
+   *   to the endpoint's own limit, so this can only ever request fewer tokens.
    * @returns Response containing execution result or prompt response
    * @throws {ShapeshyftApiError} If the request fails
    */
@@ -1239,7 +1266,8 @@ export class ShapeshyftClient {
     input: unknown,
     method: 'GET' | 'POST' = 'POST',
     apiKey?: string,
-    timeout?: number
+    timeout?: number,
+    maxOutputTokens?: number
   ): Promise<BaseResponse<AiExecutionResponse | AiPromptResponse>> {
     if (method === 'GET') {
       return this.executeAiGet(
@@ -1248,7 +1276,8 @@ export class ShapeshyftClient {
         endpointName,
         input,
         apiKey,
-        timeout
+        timeout,
+        maxOutputTokens
       );
     }
     return this.executeAiPost(
@@ -1257,7 +1286,8 @@ export class ShapeshyftClient {
       endpointName,
       input,
       apiKey,
-      timeout
+      timeout,
+      maxOutputTokens
     );
   }
 
