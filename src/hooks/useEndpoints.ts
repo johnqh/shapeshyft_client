@@ -3,12 +3,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   BaseResponse,
   Endpoint,
-  EndpointCreateRequest,
   EndpointQueryParams,
-  EndpointUpdateRequest,
   NetworkClient,
   Optional,
 } from '@sudobility/shapeshyft_types';
+import type {
+  EndpointCreatePayload,
+  EndpointUpdatePayload,
+} from '../endpoint-payloads';
 import type { FirebaseIdToken } from '../types';
 import { ShapeshyftClient } from '../network/ShapeshyftClient';
 import { QUERY_KEYS } from '../types';
@@ -33,12 +35,12 @@ export interface UseEndpointsReturn {
   getEndpoint: (endpointId: string) => Promise<BaseResponse<Endpoint>>;
   /** Create a new endpoint. Automatically invalidates the endpoints list on success. */
   createEndpoint: (
-    data: EndpointCreateRequest
+    data: EndpointCreatePayload
   ) => Promise<BaseResponse<Endpoint>>;
   /** Update an existing endpoint. Automatically invalidates the endpoints list on success. */
   updateEndpoint: (
     endpointId: string,
-    data: EndpointUpdateRequest
+    data: EndpointUpdatePayload
   ) => Promise<BaseResponse<Endpoint>>;
   /** Delete an endpoint. Automatically invalidates the endpoints list on success. */
   deleteEndpoint: (endpointId: string) => Promise<BaseResponse<Endpoint>>;
@@ -139,7 +141,7 @@ export const useEndpoints = (
   }, [queryClient, entitySlug, projectId]);
 
   const createMutation = useMutation({
-    mutationFn: async (data: EndpointCreateRequest) => {
+    mutationFn: async (data: EndpointCreatePayload) => {
       if (!entitySlug || !projectId || !token)
         throw new Error('Missing required params');
       return client.createEndpoint(entitySlug, projectId, data, token);
@@ -155,7 +157,7 @@ export const useEndpoints = (
       data,
     }: {
       endpointId: string;
-      data: EndpointUpdateRequest;
+      data: EndpointUpdatePayload;
     }) => {
       if (!entitySlug || !projectId || !token)
         throw new Error('Missing required params');
@@ -208,12 +210,12 @@ export const useEndpoints = (
   );
 
   const createEndpoint = useCallback(
-    (data: EndpointCreateRequest) => createMutation.mutateAsync(data),
+    (data: EndpointCreatePayload) => createMutation.mutateAsync(data),
     [createMutation]
   );
 
   const updateEndpoint = useCallback(
-    (endpointId: string, data: EndpointUpdateRequest) =>
+    (endpointId: string, data: EndpointUpdatePayload) =>
       updateMutation.mutateAsync({ endpointId, data }),
     [updateMutation]
   );

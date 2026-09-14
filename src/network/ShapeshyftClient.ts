@@ -4,9 +4,7 @@ import type {
   AnalyticsResponse,
   BaseResponse,
   Endpoint,
-  EndpointCreateRequest,
   EndpointQueryParams,
-  EndpointUpdateRequest,
   EntityStorageConfig,
   GetApiKeyResponse,
   LlmApiKeyCreateRequest,
@@ -27,6 +25,10 @@ import type {
   UserSettings,
   UserSettingsUpdateRequest,
 } from '@sudobility/shapeshyft_types';
+import type {
+  EndpointCreatePayload,
+  EndpointUpdatePayload,
+} from '../endpoint-payloads';
 import type {
   CreateEntityRequest,
   Entity,
@@ -733,7 +735,7 @@ export class ShapeshyftClient {
    *
    * @param entitySlug - URL-safe slug identifying the entity
    * @param projectId - UUID of the project
-   * @param data - Endpoint creation payload including endpoint_name, display_name, and llm_key_id
+   * @param data - Endpoint creation payload including endpoint_name, display_name, and the product's provider binding fields
    * @param token - Firebase ID token for authentication
    * @returns Response containing the created endpoint
    * @throws {ShapeshyftApiError} If the request fails
@@ -741,7 +743,7 @@ export class ShapeshyftClient {
   async createEndpoint(
     entitySlug: string,
     projectId: string,
-    data: EndpointCreateRequest,
+    data: EndpointCreatePayload,
     token: FirebaseIdToken
   ): Promise<BaseResponse<Endpoint>> {
     const headers = createAuthHeaders(token);
@@ -777,7 +779,7 @@ export class ShapeshyftClient {
     entitySlug: string,
     projectId: string,
     endpointId: string,
-    data: EndpointUpdateRequest,
+    data: EndpointUpdatePayload,
     token: FirebaseIdToken
   ): Promise<BaseResponse<Endpoint>> {
     const headers = createAuthHeaders(token);

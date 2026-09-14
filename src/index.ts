@@ -22,3 +22,10 @@ export type {
   UserApiKeyUpdateRequest,
 } from './types';
 export { QUERY_KEYS } from './types';
+
+// Endpoint request payloads that carry any product's provider binding
+export type {
+  EndpointBindingFields,
+  EndpointCreatePayload,
+  EndpointUpdatePayload,
+} from './endpoint-payloads';
