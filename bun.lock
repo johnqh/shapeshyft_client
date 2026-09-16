@@ -7,7 +7,7 @@
       "devDependencies": {
         "@eslint/js": "^9.39.2",
         "@sudobility/di": "^1.5.65",
-        "@sudobility/shapeshyft_types": "^1.1.3",
+        "@sudobility/shapeshyft_types": "^1.1.4",
         "@sudobility/types": "^1.9.67",
         "@tanstack/react-query": "^5.90.5",
         "@testing-library/dom": "^10.4.1",
@@ -27,7 +27,7 @@
         "vitest": "^4.0.4",
       },
       "peerDependencies": {
-        "@sudobility/shapeshyft_types": "^1.1.3",
+        "@sudobility/shapeshyft_types": "^1.1.4",
         "@sudobility/types": "^1.9.67",
         "@tanstack/react-query": ">=5.0.0",
         "react": ">=18.0.0",
@@ -193,7 +193,7 @@
 
     "@sudobility/shapeshyft_engine": ["@sudobility/shapeshyft_engine@1.0.4", "", { "dependencies": { "@sudobility/types": "^1.9.67" }, "peerDependencies": { "@anthropic-ai/sdk": "^0.39.0", "@google/generative-ai": "^0.21.0", "groq-sdk": "^0.37.0", "openai": "^4.77.0", "sharp": "^0.35.4" }, "optionalPeers": ["@anthropic-ai/sdk", "@google/generative-ai", "groq-sdk", "openai", "sharp"] }, "sha512-tXMKiE7YMHsS7m+VUwiR2Z3H6dyLd/y8BT5e77c4sPevvLLs4JtGciValvY2EtZ3xRhqu8AFtMWi7aQ5p0gl9w=="],
 
-    "@sudobility/shapeshyft_types": ["@sudobility/shapeshyft_types@1.1.3", "", { "dependencies": { "@sudobility/shapeshyft_engine": "^1.0.4" }, "peerDependencies": { "@sudobility/types": "^1.9.67" } }, "sha512-O4bgoHmNG5jQbv4GcxEGBKZV2juPiTvWtGyGmJfIxSY8w7gSUoz+v7NhVTHafJd1uV8df0NIcW9eS2K9mMI5Bw=="],
+    "@sudobility/shapeshyft_types": ["@sudobility/shapeshyft_types@1.1.4", "", { "dependencies": { "@sudobility/shapeshyft_engine": "^1.0.4" }, "peerDependencies": { "@sudobility/types": "^1.9.67" } }, "sha512-G+uzvG/65qw2qroCNlnxQudQtFMKrurTTk4YbKYPZJcqeLviUaBuk7F8lUxSA2A+0vTgF9hop95dwWRzk2JdIQ=="],
 
     "@sudobility/types": ["@sudobility/types@1.9.67", "", {}, "sha512-d+jk4L9i8VNvOnCJW/craqiiUTPH5aRq4KYe/QBrBU3mCcTfoYjgzzXopVQRcthiZ5dwQAEpdqCTQ0gAWRN6Ww=="],
 
